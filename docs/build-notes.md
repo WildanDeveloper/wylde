@@ -107,3 +107,40 @@ $LFS_TGT-g++ -static hello.cpp -o hello && ./hello # "cpp ok: 42"
 ```
 228 binaries installed under `$LFS/usr/bin`. The cross toolchain (binutils 2.45,
 gcc 15.2.0, glibc 2.42, libstdc++) is functional.
+
+---
+
+## Phase 1b — Chroot + basic system (LFS ch. 7)
+
+Entered the chroot as root, created the directory tree and essential files, then
+built the temporary tools: gettext 0.26, bison 3.8.2, perl 5.42.0, Python 3.13.7,
+texinfo 7.2, util-linux 2.41.1.
+
+### `install: invalid user 'tester'`
+The book's `createfiles` block runs `install -o tester -d /home/tester` — the
+`tester` account must already exist in `/etc/passwd` when that runs. Extracted
+command blocks lose their surrounding order, so the append had to precede the
+install. Reruns are guarded with `grep -q '^tester:'` to avoid duplicate entries.
+
+### `ln: failed to create symbolic link '/etc/mtab': File exists`
+Book uses `ln -sv` (not `-f`), so the stage is not rerunnable. Changed to
+`ln -sfv` for idempotency.
+
+### Chroot automation notes
+- The chroot's `/usr/bin/gcc` is the cross compiler: `--host` and `--target` are
+  both `x86_64-lfs-linux-gnu`, so the drivers install unprefixed. Inside the
+  chroot, plain `make` produces correct target binaries — `/tools/bin` does not
+  need to be in `PATH`.
+- Kernel filesystems (`devpts`, `proc`, `sysfs`, `tmpfs` on `/run`, `/dev/shm`)
+  must stay mounted for the whole chroot phase. The chain script checks
+  `mountpoint` before mounting, so reruns are safe.
+
+### Verification (chroot)
+```bash
+chroot /mnt/lfs /usr/bin/env -i PATH=/usr/bin:/usr/sbin /bin/bash -c \
+  'printf "int main(){puts(\"ok\");}" > /tmp/x.c && gcc /tmp/x.c -o /tmp/x && /tmp/x'
+# wylde chroot ok — dynamically linked, runs against /usr/lib/libc.so.6
+```
+bash 5.3.0, coreutils 9.7, Python 3.13.7, perl 5.42.0, util-linux 2.41.1 all
+functional inside the target root.
+
