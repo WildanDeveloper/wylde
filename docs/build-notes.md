@@ -187,4 +187,64 @@ globs must be anchored: `rm -rf ncurses-6.6-20260926` (exact name), never
 mke2fs 1.47.3, ip 6.16.0, ps 4.0.5, modprobe 34.2
 ```
 
+---
+
+## Phase 1c–1d — Kernel, GRUB, first boot
+
+Built OpenSSL 3.5.2 (needed by later packages anyway), Linux 6.16.1 with a
+Wylde-tuned config, and GRUB 2.12. First boot reached the login prompt.
+
+### objtool: `gelf.h: No such file or directory`
+The kernel's objtool needs libelf, which does not exist yet at that point.
+Built elfutils' libelf (ch. 8) first, then rebuilt the kernel.
+
+### `certs/extract-cert.c: openssl/bio.h: No such file or directory`
+The kernel's `extract-cert` host tool needs libcrypto. Rather than trimming the
+cert options out of the config, OpenSSL was built — curl, git and openssh all
+need it in phase 2 anyway.
+
+### kernel.org no longer publishes reference configs
+`https://cdn.kernel.org/pub/linux/kernel/v6.x/config-6.16.1` → 404, and the
+directory listing has no `config-*` files at all. The book starts from that
+file; Wylde uses `make x86_64_defconfig` plus the `scripts/config` tuning pass
+in `build/05-kernel.sh`.
+
+Surprise worth knowing: in 6.16, `x86_64_defconfig` builds almost everything
+**built-in** (13 modules total). So the "lean" kernel is 11 MB with no module
+dependencies at boot — smaller overall than a modular kernel plus 200 MB of
+modules.
+
+### Two globs ate two tarballs
+`rm -rf ncurses-*` deleted `ncurses-6.6-20260926.tgz`, and `rm -rf grub-2.12*`
+deleted `grub-2.12.tar.xz`. Cleanup must use exact directory names.
+
+### `grub-mkconfig_lib` was binary garbage in the image
+A QEMU boot test had been killed mid-write with the image attached read-write,
+so the ext4 journal was left incomplete and files came out corrupt. Two lessons,
+both now enforced:
+- `scripts/qemu-boot.sh` passes `-snapshot`, so the base image is never written.
+- If a test is interrupted, `e2fsck` the image before trusting it.
+
+### `root=/dev/loop7p2` → `VFS: Cannot open root device`
+`grub-mkconfig` derives `root=` from the *host* loop device, which changes
+between runs. The image script now rewrites it to `/dev/sda2`, the name the
+guest actually sees on the QEMU IDE disk.
+
+### `INIT: No inittab file found` → `Enter runlevel:`
+`/etc/inittab` is created in the book's chapter 9, which had been skipped. It
+lives in `build/07-shadow.sh`, with one addition: an `agetty` on `ttyS0` at
+115200 so the system is reachable over serial. Root gets an empty password for
+the first boot only.
+
+### `mount: /run: can't find in /etc/fstab`
+The first `fstab` only had `/` and swap. SysV's `mountvirtfs` calls plain
+`mount /run`, `/proc`, `/sys`, `/dev/pts` and `/dev/shm`, so all of them need
+fstab entries. Now generated in full by `scripts/make-disk-image.sh`.
+
+### shadow: `readpassphrase() is missing`
+The book's flags `--without-libbsd` (use the bundled copy) and
+`make exec_prefix=/usr install` are both required; plain `make install` puts
+binaries under the wrong prefix.
+
+
 

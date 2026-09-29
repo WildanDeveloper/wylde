@@ -153,12 +153,6 @@ Kernel \r on \m (\l)
 
 CONF
 
-# root has an empty password for the first boot; set one before exposing the
-# system to any network
-cat > /etc/shadow << "CONF"
-root:x:0:
-CONF
-
 cat > /etc/securetty << "CONF"
 console
 tty1
