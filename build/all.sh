@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 echo "=== Wylde build start: $(date) ==="
 
 for phase in 01-toolchain 02-chroot 03-chroot-tools 04-bootcritical \
-             05-kernel 06-grub 07-shadow; do
+             05-kernel 06-grub 07-shadow 08-udev-sysklogd; do
   echo "--- $phase"
   ./$phase.sh
 done

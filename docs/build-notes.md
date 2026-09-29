@@ -246,5 +246,41 @@ The book's flags `--without-libbsd` (use the bundled copy) and
 `make exec_prefix=/usr install` are both required; plain `make install` puts
 binaries under the wrong prefix.
 
+### `Login incorrect` at the serial prompt
+`/etc/shadow` had been overwritten with a placeholder line (`root:x:`) after
+`pwconv` had already produced a valid one. A valid passwordless root entry is
+`root::19000:0:99999:7:::` — the account is only passwordless for the very
+first boot, and the release checklist must not ship that.
+
+### Two boot scripts failed: no `/bin/udevadm`, syslog daemon missing
+`udev_retry` and `sysklogd` come from packages the boot-critical subset had
+skipped. Both are now built (`build/08-udev-sysklogd.sh`): udev from the
+`systemd-257.8` tarball, and `sysklogd-2.7.2` with `/etc/syslog.conf` in
+`secure_mode 2` — no network syslog listener.
+
+### `python3 is missing modules: jinja2` (meson, udev)
+The chroot Python has no pip and no DNS, so jinja2 (pure Python) is copied in
+from the host's `dist-packages`. Same trick is needed for any later meson
+package that imports jinja2.
+
+## First boot
+
+```
+Linux version 6.16.1 (gcc (GCC) 15.2.0, GNU ld (GNU Binutils) 2.45)
+INIT: version 3.14 booting
+INIT: Entering runlevel: 3
+Wylde Linux 0.1-alpha
+Kernel 6.16.1 on x86_64 (ttyS0)
+wylde login: root
+-bash-5.3#
+```
+
+Verified inside the guest: kernel identity, `/etc/issue`, root filesystem
+listing, `gcc` compiling and running a binary, disk usage, memory, loopback
+networking, mount table, running processes, runlevel-3 boot scripts. The image
+boots under QEMU with `-snapshot`, so the image on disk is never touched by
+tests.
+
+
 
 

@@ -63,6 +63,7 @@ devpts	/dev/pts	devpts	gid=5,mode=0620	0 0
 tmpfs	/run	tmpfs	defaults,mode=0755	0 0
 devtmpfs	/dev	devtmpfs	defaults	0 0
 tmpfs	/dev/shm	tmpfs	defaults	0 0
+cgroup2	/sys/fs/cgroup	cgroup2	defaults	0 0
 # End /etc/fstab
 EOF
 
