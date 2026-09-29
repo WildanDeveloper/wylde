@@ -144,3 +144,47 @@ chroot /mnt/lfs /usr/bin/env -i PATH=/usr/bin:/usr/sbin /bin/bash -c \
 bash 5.3.0, coreutils 9.7, Python 3.13.7, perl 5.42.0, util-linux 2.41.1 all
 functional inside the target root.
 
+---
+
+## Phase 1b (cont.) — Boot-critical packages (subset of LFS ch. 8)
+
+Built the packages needed for a first boot: ninja 1.13.1, meson 1.8.3, zlib
+1.3.1, zstd 1.5.7, pkgconf 2.5.1, kmod 34.2, bison 3.8.2, flex 2.6.4,
+procps-ng 4.0.5, iproute2 6.16.0, e2fsprogs 1.47.3, sysvinit 3.14 + bootscripts.
+
+### `ModuleNotFoundError: No module named 'mesonbuild'`
+The book's meson install relies on `pip3`, but the ch. 7 Python was built with
+`--without-ensurepip`, so there is no pip. Installed meson from source instead:
+tree copied to `/usr/lib/meson` with a `/usr/bin/meson` shim that prepends it to
+`sys.path`. Do **not** `os.chdir()` in the shim — meson resolves the source
+directory relative to the caller's cwd.
+
+### `ModuleNotFoundError: No module named 'zlib'` (inside the chroot)
+Ch. 7 Python builds before zlib exists, so its zlib module is missing, and meson
+cannot even `import gzip`. Fixed by building zlib from ch. 8 and rebuilding
+Python — exactly the order the book uses. Also created `/etc/ld.so.conf` early
+(planned for ch. 9) because the shared-library install steps need `ldconfig`.
+
+### kmod: `Dependency "libcrypto" not found`
+kmod wants OpenSSL for PKCS#7-signed modules. Wylde does not sign modules, so
+built with `-D openssl=disabled` instead of pulling in OpenSSL — lean by design.
+
+### procps: `Cannot find ncurses wide library ncursesw with --enable-watch8bit`
+The ch. 7 ncurses is a stripped temporary tools build. Installed the full
+ch. 8 ncurses (6.6) with ABI-5 compatibility libraries before procps.
+
+### A glob ate a tarball
+The ch. 5 cleanup step `rm -rf ncurses-*` matched `ncurses-6.6-20260926.tgz` as
+well as the extracted directory, deleting the tarball. Re-downloaded. Cleanup
+globs must be anchored: `rm -rf ncurses-6.6-20260926` (exact name), never
+`ncurses-*`.
+
+### Verification (1b complete)
+```
+/sbin/init                — SysV init, 65 KB
+/etc/init.d               — 21 boot scripts (checkfs, cleanfs, modules, udev, …)
+/etc/rc.d/rc{0..6}.d      — runlevel symlinks
+mke2fs 1.47.3, ip 6.16.0, ps 4.0.5, modprobe 34.2
+```
+
+
