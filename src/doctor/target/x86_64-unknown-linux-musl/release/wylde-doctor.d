@@ -1,0 +1,1 @@
+/root/distro/src/doctor/target/x86_64-unknown-linux-musl/release/wylde-doctor: /root/distro/src/doctor/src/main.rs /root/distro/src/doctor/src/proc.rs /root/distro/src/doctor/src/report.rs /root/distro/src/doctor/src/services.rs

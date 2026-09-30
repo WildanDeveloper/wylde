@@ -1,0 +1,27 @@
+name=libstdcpp-pass1
+version=15.2.0
+description="Libstdc++ from the first-pass GCC, needed to build the target's C++ runtime" license=GPL-3.0-or-later-runtime-library-exception
+srcdir=gcc-$version
+source=https://ftp.gnu.org/gnu/gcc/gcc-$version/gcc-$version.tar.xz
+checksum(https://ftp.gnu.org/gnu/gcc/gcc-$version/gcc-$version.tar.xz)=438fd996826b0c82485a29da03a72d71d6e3541a83ec702df4271f6fe025d24e
+depends=gcc-pass1
+
+build() {
+    LFS_TGT=$(uname -m)-lfs-linux-gnu
+    # the port is unpacked from the same source, so gmp/mpfr/mpc are not present;
+    # libstdc++ does not need them
+    rm -rf build
+    mkdir -v build
+    cd       build
+    ../libstdc++-v3/configure      \
+        --host="$LFS_TGT"          \
+        --build=$(../config.guess) \
+        --prefix=/usr              \
+        --disable-multilib         \
+        --disable-nls              \
+        --disable-libstdcxx-pch    \
+        --with-gxx-include-dir=/tools/$LFS_TGT/include/c++/15.2.0
+    make
+    make DESTDIR="$PKG" install
+    rm -fv "$PKG/usr/lib/libstdc++.la" "$PKG/usr/lib/libsupc++.la"
+}

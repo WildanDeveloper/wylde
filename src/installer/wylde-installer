@@ -1,0 +1,187 @@
+#!/bin/bash
+# wylde-installer — guided and expert installation of Wylde Linux
+set -e
+
+VERSION=0.1-alpha
+KERNEL=6.16.1
+LFS_BOOTSCRIPTS=20250827
+MOUNT=/mnt/wylde
+
+usage() {
+    cat << 'USAGE'
+wylde-installer — install Wylde Linux
+
+USAGE:
+    sudo ./wylde-installer                # guided mode, asks 4 questions
+    sudo ./wylde-installer --expert       # expert mode, every choice explicit
+    sudo ./wylde-installer --help
+
+GUIDED MODE ASKS:
+    1. target device       (e.g. /dev/sda, /dev/nvme0n1)
+    2. partition layout    (single use / or separate /home)
+    3. hostname            (default: wylde)
+    4. timezone            (default: UTC)
+
+USAGE
+}
+
+log() { echo "[wylde-installer] $*"; }
+die() { echo "[wylde-installer] fatal: $*" >&2; exit 1; }
+
+[ $EUID -eq 0 ] || die "must run as root"
+case "${1:-}" in
+    --help|-h) usage; exit 0 ;;
+esac
+MODE=${1:-guided}
+[ "$MODE" = "--expert" ] || MODE=guided
+
+log "Wylde $VERSION installer"
+log "every action this script takes is printed. nothing runs hidden."
+
+# ---------------------------------------------------------------- disk choice
+
+if [ "$MODE" = "--expert" ]; then
+    read -rp "target device (whole disk): " DEVICE
+    read -rp "partition layout [single|home]: " LAYOUT
+    read -rp "hostname [wylde]: " HOSTNAME
+    read -rp "timezone [UTC]: " TIMEZONE
+else
+    echo "available block devices:"
+    lsblk -d -o NAME,SIZE,MODEL | sed 's/^/    /'
+    echo
+    read -rp "target device (e.g. sda, or full path): " DEVICE_ANSWER
+    case "$DEVICE_ANSWER" in
+        /dev/*) DEVICE="$DEVICE_ANSWER" ;;
+        *) DEVICE="/dev/$DEVICE_ANSWER" ;;
+    esac
+    read -rp "partition layout: use the whole disk, or keep /home separate? [whole] " LAYOUT_ANSWER
+    LAYOUT=${LAYOUT_ANSWER:-whole}
+    read -rp "hostname [wylde]: " HOSTNAME_ANSWER
+    HOSTNAME=${HOSTNAME_ANSWER:-wylde}
+    read -rp "timezone [UTC]: " TIMEZONE_ANSWER
+    TIMEZONE=${TIMEZONE_ANSWER:-UTC}
+fi
+
+[ -b "$DEVICE" ] || die "$DEVICE is not a block device"
+HOSTNAME=${HOSTNAME:-wylde}
+TIMEZONE=${TIMEZONE:-UTC}
+
+# ------------------------------------------------------------- safety checks
+
+log "safety checks"
+SIZE_GB=$(( $(blockdev --getsize64 "$DEVICE") / 1000 / 1000 / 1000 ))
+log "  $DEVICE is ${SIZE_GB} GB"
+[ "$SIZE_GB" -ge 4 ] || die "$DEVICE is smaller than 4 GB; Wylde needs at least 4"
+if findmnt -n -S "$DEVICE" >/dev/null 2>&1; then
+    die "$DEVICE has mounted partitions. unmount them first."
+fi
+log "  device is not in use"
+log "  ALL DATA ON $DEVICE WILL BE DESTROYED"
+read -rp "  type the device name again to confirm: " CONFIRM
+[ "$CONFIRM" = "$DEVICE" ] || die "confirmation did not match $DEVICE"
+log "  confirmed"
+
+# ------------------------------------------------------------- partitioning
+
+log "writing a fresh partition table to $DEVICE"
+wipefs -a "$DEVICE" >/dev/null 2>&1 || true
+sfdisk "$DEVICE" << EOF
+label: dos
+unit: sectors
+
+start=2048, size=204800, type=83, bootable
+start=206848, size=4000000, type=83
+$( [ "$LAYOUT" = "home" ] && echo "start=4206848, size=0, type=83" )
+EOF
+partprobe "$DEVICE" || true
+sleep 2
+udevadm settle 2>/dev/null || true
+
+BOOT_PART=${DEVICE}1
+ROOT_PART=${DEVICE}2
+HOME_PART=""
+[ "$LAYOUT" = "home" ] && HOME_PART=${DEVICE}3
+
+log "formatting"
+mkswap -q "$BOOT_PART"
+mkfs -q -t ext4 -L wylde "$ROOT_PART"
+[ -n "$HOME_PART" ] && mkfs -q -t ext4 -L home "$HOME_PART"
+
+# ------------------------------------------------------------------ mounting
+
+log "mounting the target at $MOUNT"
+mkdir -p "$MOUNT"
+mount "$ROOT_PART" "$MOUNT"
+[ -n "$HOME_PART" ] && mkdir -p "$MOUNT/home" && mount "$HOME_PART" "$MOUNT/home"
+mkdir -p "$MOUNT"/{boot,dev,proc,sys,run,tmp,root}
+chmod 1777 "$MOUNT/tmp"
+
+log "copying the system (this takes a few minutes)"
+rsync -aAXH --one-file-system \
+  --exclude=/dev --exclude=/proc --exclude=/sys --exclude=/run --exclude=/tmp \
+  --exclude=/mnt/lfs --exclude=/sources --exclude=/tools --exclude=/mnt/wylde \
+  / "$MOUNT/"
+
+# -------------------------------------------------------------------- system
+
+log "writing /etc/fstab"
+ROOT_UUID=$(blkid -o value -s UUID "$ROOT_PART")
+SWAP_UUID=$(blkid -o value -s UUID "$BOOT_PART")
+{
+    echo "# Begin /etc/fstab"
+    echo "# <file system> <mount point> <type> <options> <dump> <fsck order>"
+    echo "UUID=$ROOT_UUID	/		ext4	defaults,noatime	0 1"
+    echo "UUID=$SWAP_UUID	swap	swap	defaults		0 0"
+    [ -n "$HOME_PART" ] && echo "UUID=$(blkid -o value -s UUID "$HOME_PART")	/home	ext4	defaults	0 2"
+    echo "proc	/proc	proc	defaults	0 0"
+    echo "sysfs	/sys	sysfs	defaults	0 0"
+    echo "devpts	/dev/pts	devpts	gid=5,mode=0620	0 0"
+    echo "tmpfs	/run	tmpfs	defaults,mode=0755	0 0"
+    echo "devtmpfs	/dev	devtmpfs	defaults	0 0"
+    echo "tmpfs	/dev/shm	tmpfs	defaults	0 0"
+    echo "# End /etc/fstab"
+} > "$MOUNT/etc/fstab"
+
+log "setting hostname to $HOSTNAME"
+echo "$HOSTNAME" > "$MOUNT/etc/hostname"
+sed -i "s/127.0.0.1  localhost.*/127.0.0.1  localhost localhost.localdomain $HOSTNAME/" \
+  "$MOUNT/etc/hosts"
+
+if [ -f "/usr/share/zoneinfo/$TIMEZONE" ]; then
+    log "setting timezone to $TIMEZONE"
+    cp "/usr/share/zoneinfo/$TIMEZONE" "$MOUNT/etc/localtime"
+    echo "$TIMEZONE" > "$MOUNT/etc/timezone"
+else
+    log "unknown timezone '$TIMEZONE', leaving UTC"
+fi
+
+log "setting the root password"
+until chroot "$MOUNT" /usr/bin/passwd root; do
+    log "the two passwords did not match, try again"
+done
+
+# ------------------------------------------------------------------ bootloader
+
+log "installing GRUB to $DEVICE"
+mkdir -p "$MOUNT/boot/grub"
+chroot "$MOUNT" /usr/sbin/grub-install --target=i386-pc "$DEVICE" --recheck
+chroot "$MOUNT" /usr/sbin/grub-mkconfig -o /boot/grub/grub.cfg
+sed -i "s|root=UUID=[a-f0-9-]*|root=UUID=$ROOT_UUID|" "$MOUNT/boot/grub/grub.cfg"
+
+cat << SUMMARY
+
+[wylde-installer] installation finished
+
+  device:     $DEVICE
+  root:       $ROOT_PART ($ROOT_UUID)
+  layout:     $LAYOUT
+  hostname:   $HOSTNAME
+  timezone:   $TIMEZONE
+  bootloader: GRUB (BIOS)
+  init:       /sbin/wylde-init
+
+unmount the target and reboot:
+
+    umount -R $MOUNT && reboot
+
+SUMMARY

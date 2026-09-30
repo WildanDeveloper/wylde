@@ -184,8 +184,33 @@ impl PortTree {
             }
         }
 
-        // the source directory is whatever the tarball left behind
-        let srcdir = single_dir(&work).unwrap_or_else(|| work.clone());
+        // the source directory: an explicit srcdir= wins, otherwise whatever the
+        // single tarball left behind
+        let srcdir = match pkgfile.vars.get("srcdir") {
+            Some(pattern) => {
+                let expanded = expand(pattern, pkgfile);
+                let found: Vec<PathBuf> = fs::read_dir(&work)
+                    .map_err(|e| e.to_string())?
+                    .filter_map(|e| e.ok())
+                    .map(|e| e.path())
+                    .filter(|p| p.is_dir())
+                    .filter(|p| {
+                        p.file_name()
+                            .map(|n| glob_match(&expanded, &n.to_string_lossy()))
+                            .unwrap_or(false)
+                    })
+                    .collect();
+                if found.is_empty() {
+                    return Err(format!(
+                        "srcdir={} matched no directory in {}",
+                        expanded,
+                        work.display()
+                    ));
+                }
+                found.into_iter().next().unwrap()
+            }
+            None => single_dir(&work).unwrap_or_else(|| work.clone()),
+        };
         let pkg_stage = work.join("pkg");
         fs::create_dir_all(&pkg_stage).map_err(|e| e.to_string())?;
 
@@ -248,11 +273,22 @@ impl PortTree {
             } else if let Some((_, original)) = by_inode.get(&(meta.dev(), meta.ino())) {
                 let _ = fs::remove_file(&to);
                 if fs::hard_link(original, &to).is_err() {
-                    fs::copy(&from, &to).map_err(|e| e.to_string())?;
+                    let staging = to.with_extension("wld-new");
+                    let _ = fs::remove_file(&staging);
+                    fs::copy(&from, &staging).map_err(|e| e.to_string())?;
+                    fs::set_permissions(&staging, meta.permissions()).map_err(|e| e.to_string())?;
+                    fs::rename(&staging, &to).map_err(|e| e.to_string())?;
                 }
             } else {
-                fs::copy(&from, &to).map_err(|e| e.to_string())?;
-                fs::set_permissions(&to, meta.permissions()).map_err(|e| e.to_string())?;
+                // Write to a temporary name and rename it into place. Copying
+                // in place truncates the destination, which segfaults every
+                // running process that has the file mapped — replacing
+                // libc.so.6 under the running shell does exactly that.
+                let staging = to.with_extension("wld-new");
+                let _ = fs::remove_file(&staging);
+                fs::copy(&from, &staging).map_err(|e| e.to_string())?;
+                fs::set_permissions(&staging, meta.permissions()).map_err(|e| e.to_string())?;
+                fs::rename(&staging, &to).map_err(|e| e.to_string())?;
                 by_inode.insert((meta.dev(), meta.ino()), (from.clone(), to.clone()));
             }
             installed.push(relative.clone());
@@ -306,6 +342,31 @@ fn fetch(url: &str, dest: &Path) -> Result<(), String> {
         }
     }
     Err(format!("cannot fetch {} ({})", url, last))
+}
+
+/// Glob match for one path component: `*` and `?` only, which is all a
+/// `srcdir=` pattern needs.
+fn glob_match(pattern: &str, name: &str) -> bool {
+    let p: Vec<char> = pattern.chars().collect();
+    let n: Vec<char> = name.chars().collect();
+    fn walk(p: &[char], n: &[char]) -> bool {
+        if p.is_empty() {
+            return n.is_empty();
+        }
+        match p[0] {
+            '*' => {
+                for skip in 0..=n.len() {
+                    if walk(&p[1..], &n[skip..]) {
+                        return true;
+                    }
+                }
+                false
+            }
+            '?' => !n.is_empty() && walk(&p[1..], &n[1..]),
+            c => !n.is_empty() && n[0] == c && walk(&p[1..], &n[1..]),
+        }
+    }
+    walk(&p, &n)
 }
 
 fn single_dir(dir: &Path) -> Option<PathBuf> {

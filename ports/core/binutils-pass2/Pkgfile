@@ -1,0 +1,29 @@
+name=binutils-pass2
+version=2.45
+description="Binutils, second pass: the native linker and binutils that ship in Wylde" license=GPL-3.0-or-later
+srcdir=binutils-$version
+source=https://ftp.gnu.org/gnu/binutils/binutils-$version.tar.xz
+checksum(https://ftp.gnu.org/gnu/binutils/binutils-$version.tar.xz)=c50c0e7f9cb188980e2cc97e4537626b1672441815587f1eab69d2a1bfbef5d2
+depends="gcc-pass1 glibc"
+
+build() {
+    LFS_TGT=$(uname -m)-lfs-linux-gnu
+    sed '6031s/$add_dir//' -i ltmain.sh
+    mkdir -v build
+    cd       build
+    ../configure                   \
+        --prefix=/usr              \
+        --build=$(../config.guess) \
+        --host="$LFS_TGT"          \
+        --disable-nls              \
+        --enable-shared            \
+        --enable-gprofng=no        \
+        --disable-werror           \
+        --enable-64-bit-bfd        \
+        --enable-new-dtags         \
+        --enable-default-hash-style=gnu
+    make
+    make DESTDIR="$PKG" install
+    rm -fv "$PKG/usr/lib/libbfd.a" "$PKG/usr/lib/libctf.a" "$PKG/usr/lib/libctf-nobfd.a" \
+           "$PKG/usr/lib/libopcodes.a" "$PKG/usr/lib/libsframe.a"
+}

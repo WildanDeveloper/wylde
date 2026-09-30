@@ -1,0 +1,42 @@
+name=glibc
+version=2.42
+description="GNU C Library: the target libc, built by the first-pass compiler" license=LGPL-2.1-or-later
+srcdir=glibc-$version
+source=https://ftp.gnu.org/gnu/glibc/glibc-$version.tar.xz
+checksum(https://ftp.gnu.org/gnu/glibc/glibc-$version.tar.xz)=d1775e32e4628e64ef930f435b67bb63af7599acb6be2b335b9f19f16509f17f
+patches=https://www.linuxfromscratch.org/patches/lfs/12.4/glibc-$version-fhs-1.patch
+checksum(https://www.linuxfromscratch.org/patches/lfs/12.4/glibc-$version-fhs-1.patch)=643552db030e2f2d7ffde4f558e0f5f83d3fabf34a2e0e56ebdb49750ac27b0d
+depends=gcc-pass1 linux-headers
+
+build() {
+    LFS_TGT=$(uname -m)-lfs-linux-gnu
+    mkdir -pv "$PKG/lib64"
+    case $(uname -m) in
+        i?86)   ln -sfv ld-linux.so.2 "$PKG/lib/ld-lsb.so.3"
+        ;;
+        x86_64) ln -sfv ../lib/ld-linux-x86-64.so.2 "$PKG/lib64"
+                ln -sfv ../lib/ld-linux-x86-64.so.2 "$PKG/lib64/ld-lsb-x86-64.so.3"
+        ;;
+    esac
+    patch -Np1 -i "$PATCHDIR/glibc-2.42-fhs-1.patch"
+    mkdir -v build
+    cd       build
+    echo "rootsbindir=/usr/sbin" > configparms
+    ../configure                             \
+        --prefix=/usr                        \
+        --host="$LFS_TGT"                    \
+        --build=$(../scripts/config.guess)   \
+        --disable-nscd                       \
+        libc_cv_slibdir=/usr/lib             \
+        --enable-kernel=5.4
+    make
+    make DESTDIR="$PKG" install
+    sed '/RTLDLIST=/s@/usr@@g' -i "$PKG/usr/bin/ldd"
+    # the toolchain sanity check from the book: link a program against the new libc
+    echo 'int main(){}' | $LFS_TGT-gcc -x c - -v -Wl,--verbose &> dummy.log
+    readelf -l a.out | grep ': /lib'
+    grep -E -o "/lib.*/S?crt[1in].*succeeded" dummy.log
+    grep "/lib.*/libc.so.6 " dummy.log
+    grep found dummy.log
+    rm -v a.out dummy.log
+}

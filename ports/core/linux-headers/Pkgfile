@@ -1,0 +1,12 @@
+name=linux-headers
+version=6.16.1
+description="Linux kernel headers, installed for the target libc and kernel build" license=GPL-2.0-only
+source=https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$version.tar.xz
+checksum(https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$version.tar.xz)=ea43491bc7ace1e414b3b2d957f8cf96e7049155123f0acce798accf8da1acba
+
+build() {
+    make mrproper
+    make headers
+    find usr/include -type f ! -name '*.h' -delete
+    cp -rv usr/include "$PKG/usr"
+}

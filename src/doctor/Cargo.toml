@@ -1,0 +1,17 @@
+[package]
+name = "wylde-doctor"
+version = "0.1.0"
+edition = "2021"
+description = "Resource scanner and advisor for Wylde Linux"
+license = "MIT"
+
+[[bin]]
+name = "wylde-doctor"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
