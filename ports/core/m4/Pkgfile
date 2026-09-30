@@ -1,0 +1,12 @@
+name=m4
+version=1.4.20
+description="GNU M4 macro processor"
+license=GPL-3.0-or-later
+source=https://ftp.gnu.org/gnu/m4/m4-$version.tar.gz
+checksum(https://ftp.gnu.org/gnu/m4/m4-$version.tar.gz)=6ac4fc31ce440debe63987c2ebbf9d7b6634e67a7c3279257dc7361de8bdb3ef
+
+build() {
+    ./configure --prefix=/usr
+     make
+     make DESTDIR="$PKG" install
+}

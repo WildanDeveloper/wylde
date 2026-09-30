@@ -1,0 +1,18 @@
+name=coreutils
+version=9.7
+description="Basic file, shell and text utilities"
+license=GPL-3.0-or-later
+source=https://ftpmirror.gnu.org/coreutils/coreutils-$version.tar.xz
+checksum(https://ftpmirror.gnu.org/coreutils/coreutils-$version.tar.xz)=e8bb26ad0293f9b5a1fc43fb42ba970e312c66ce92c1b0b16713d7500db251bf
+
+build() {
+    ./configure --prefix=/usr \
+                      --enable-install-program=hostname \
+                      --enable-no-install-program=kill,uptime
+     make
+     make DESTDIR="$PKG" install
+     mv -v "$PKG/usr/bin/chroot" "$PKG/usr/sbin"
+     mkdir -pv "$PKG/usr/share/man/man8"
+     mv -v "$PKG/usr/share/man/man1/chroot.1" "$PKG/usr/share/man/man8/chroot.8"
+     sed -i 's/"1"/"8"/' "$PKG/usr/share/man/man8/chroot.8"
+}

@@ -1,0 +1,13 @@
+name=gawk
+version=5.3.2
+description="Pattern scanning and processing language, GNU awk"
+license=GPL-3.0-or-later
+source=https://ftp.gnu.org/gnu/gawk/gawk-$version.tar.xz
+checksum(https://ftp.gnu.org/gnu/gawk/gawk-$version.tar.xz)=f8c3486509de705192138b00ef2c00bbbdd0e84c30d5c07d23fc73a9dc4cc9cc
+
+build() {
+    sed -i 's/extras//' Makefile.in
+     ./configure --prefix=/usr
+     make
+     make DESTDIR="$PKG" install
+}

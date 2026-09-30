@@ -1,0 +1,15 @@
+name=xz
+version=5.8.1
+description="Compressed file format .xz"
+license=0BSD
+source=https://github.com/tukaani-project/xz/releases/download/v$version/xz-$version.tar.xz
+checksum(https://github.com/tukaani-project/xz/releases/download/v$version/xz-$version.tar.xz)=0b54f79df85912504de0b14aec7971e3f964491af1812d83447005807513cd9e
+
+build() {
+    ./configure --prefix=/usr \
+                      --disable-static \
+                      --docdir=/usr/share/doc/xz-5.8.1
+     make
+     make DESTDIR="$PKG" install
+     rm -fv "$PKG/usr/lib/liblzma.la"
+}

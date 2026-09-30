@@ -1,0 +1,12 @@
+name=diffutils
+version=3.12
+description="Compare files and directories"
+license=GPL-3.0-or-later
+source=https://ftpmirror.gnu.org/diffutils/diffutils-$version.tar.xz
+checksum(https://ftpmirror.gnu.org/diffutils/diffutils-$version.tar.xz)=7c8b7f9fc8609141fdea9cece85249d308624391ff61dedaf528fcb337727dfd
+
+build() {
+    ./configure --prefix=/usr gl_cv_func_strcasecmp_works=y
+     make
+     make DESTDIR="$PKG" install
+}

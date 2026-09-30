@@ -1,0 +1,12 @@
+name=gzip
+version=1.14
+description="A GNU data compression program"
+license=GPL-3.0-or-later
+source=https://ftp.gnu.org/gnu/gzip/gzip-$version.tar.gz
+checksum(https://ftp.gnu.org/gnu/gzip/gzip-$version.tar.gz)=613d6ea44f1248d7370c7ccdeee0dd0017a09e6c39de894b3c6f03f981191c6b
+
+build() {
+    ./configure --prefix=/usr
+     make
+     make DESTDIR="$PKG" install
+}

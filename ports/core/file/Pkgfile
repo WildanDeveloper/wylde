@@ -1,0 +1,22 @@
+name=file
+version=5.46
+description="Determine what type of data a file contains"
+license=BSD-2-Clause
+source=https://github.com/file/file/archive/refs/tags/FILE5_46.tar.gz
+checksum(https://github.com/file/file/archive/refs/tags/FILE5_46.tar.gz)=73c5f11a8edf0fded2fe3471b23a7fccb3f3369a13ea612529b869c8dc96aa2b
+
+build() {
+    [ -f configure ] || autoreconf -fi
+     mkdir build
+     pushd build
+       ../configure --disable-bzlib \
+                    --disable-libseccomp \
+                    --disable-xzlib \
+                    --disable-zlib
+       make
+     popd
+     ./configure --prefix=/usr
+     make FILE_COMPILE=$(pwd)/build/src/file
+     make DESTDIR="$PKG" install
+     rm -fv "$PKG/usr/lib/libmagic.la"
+}
