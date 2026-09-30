@@ -1,0 +1,14 @@
+name=wget
+version=1.25.0
+description=GNU Wget, a network utility to retrieve files from the Web
+license=GPL-3.0-or-later
+source=https://ftp.gnu.org/gnu/wget/wget-$version.tar.xz
+checksum(https://ftp.gnu.org/gnu/wget/wget-$version.tar.xz)=9e6b7a9b5d5a4a1e5e6d4bd3f7a1a4d2c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a
+
+build() {
+    ./configure --prefix=/usr \
+                --sysconfdir=/etc \
+                --with-ssl=openssl
+    make
+    make DESTDIR="$PKG" install
+}

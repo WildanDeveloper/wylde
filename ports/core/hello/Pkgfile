@@ -1,0 +1,12 @@
+name=hello
+version=2.12.3
+description="GNU Hello: the traditional system administration test program"
+license=GPL-3.0-or-later
+source=https://ftp.gnu.org/gnu/hello/hello-$version.tar.gz
+checksum(https://ftp.gnu.org/gnu/hello/hello-$version.tar.gz)=0d5f60154382fee10b114a1c34e785d8b1f492073ae2d3a6f7b147687b366aa0
+
+build() {
+    ./configure --prefix=/usr
+    make
+    make DESTDIR="$PKG" install
+}
