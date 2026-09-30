@@ -73,6 +73,8 @@ make x86_64_defconfig
   --enable  SERIAL_8250 \
   --enable  SERIAL_8250_CONSOLE \
   --enable  PRINTK \
+  --enable  DEVKMSG \
+  --enable  PROC_KMSG \
   --enable  PRINTK_TIME \
   --enable  MAGIC_SYSRQ \
   --disable IPV6_DEFAULT

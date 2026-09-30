@@ -1,0 +1,21 @@
+# Wylde init service list — every process PID 1 starts, in order.
+# One line per service: <name> <command>
+# A leading '!' marks a one-shot service: it runs once and is not restarted.
+# Nothing starts that is not in this file. To disable a service, delete its
+# line here; `wylde-init status` prints what is actually running.
+
+# kernel tunables before anything else starts
+!sysctl     /sbin/sysctl --system
+
+# kernel modules
+!modules    /sbin/modprobe -ab
+
+# system logging
+sysklogd    /usr/sbin/syslogd -F
+
+# network: DHCP on every interface
+network     /sbin/dhcpcd -4 -b -q -t 10
+
+# login consoles
+tty1        /sbin/agetty --noclear tty1 9600 vt100
+ttyS0       /sbin/agetty --noclear ttyS0 115200 vt100
