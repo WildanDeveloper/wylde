@@ -1,0 +1,15 @@
+name=lz4
+version=1.10.0
+description="Lossless compression algorithm with a 4x speed focus"
+license=BSD-2-Clause-GPL-2.0
+source=https://github.com/lz4/lz4/archive/refs/tags/v$version.tar.gz
+
+build() {
+    make -C lib PREFIX=/usr
+    make -C programs PREFIX=/usr
+    mkdir -p "$PKG/usr/bin" "$PKG/usr/include" "$PKG/usr/lib"
+    install -m755 programs/lz4 "$PKG/usr/bin/"
+    install -m644 lib/lz4.h lib/lz4hc.h "$PKG/usr/include/"
+    install -m644 lib/liblz4.a "$PKG/usr/lib/"
+    ldconfig
+}

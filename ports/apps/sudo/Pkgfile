@@ -1,0 +1,20 @@
+name=sudo
+version=1.9.17p2
+description="Run a command as another user, with logging"
+license=ISC
+source=https://github.com/sudo-project/sudo/archive/refs/tags/v1.9.17p2.tar.gz
+checksum(https://github.com/sudo-project/sudo/archive/refs/tags/v1.9.17p2.tar.gz)=cabee23359afa698d147478c3a141437dbfecb510382e114eaf4b5087a1f8ca5
+
+build() {
+    # GitHub archives ship without a generated configure script
+    [ -f configure ] || autoreconf -fi
+    # Wylde has no PAM: sudo's bundled auth, plus shadow's passwd/group
+    ./configure --prefix=/usr     \
+                --sysconfdir=/etc \
+                --without-pam     \
+                --with-passwd     \
+                --with-group      \
+                --disable-static
+    make
+    make DESTDIR="$PKG" install
+}

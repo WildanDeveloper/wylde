@@ -1,0 +1,14 @@
+name=xxhash
+version=0.8.4
+description="Extremely fast non-cryptographic hash algorithm"
+license=BSD-2-Clause
+source=https://github.com/Cyan4973/xxHash/archive/refs/tags/v$version.tar.gz
+checksum(https://github.com/Cyan4973/xxHash/archive/refs/tags/v$version.tar.gz)=5738270935e7c3d38a79b3adf7c9692566ce7895a25f67de43ad52ab504acd32
+
+build() {
+    make XXH_NO_SHARED=no libxxhash.a >/dev/null 2>&1 || make libxxhash.a
+    mkdir -p "$PKG/usr/lib" "$PKG/usr/include"
+    cp libxxhash.a "$PKG/usr/lib/"
+    cp xxhash.h "$PKG/usr/include/"
+    ldconfig
+}

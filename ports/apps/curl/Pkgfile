@@ -1,0 +1,23 @@
+name=curl
+version=8.19.0
+description="Command line tool and library for transferring data with URLs"
+license=curl
+source=https://curl.se/download/curl-$version.tar.xz
+checksum(https://curl.se/download/curl-$version.tar.xz)=4eb41489790d19e190d7ac7e18e82857cdd68af8f4e66b292ced562d333f11df
+
+build() {
+    ./configure --prefix=/usr         \
+                --with-openssl        \
+                --with-zstd           \
+                --without-libpsl      \
+                --without-libidn2     \
+                --without-nghttp2     \
+                --without-ngtcp2      \
+                --without-brotli      \
+                --disable-ldap        \
+                --disable-ldaps       \
+                --disable-manual      \
+                --disable-static
+    make
+    make DESTDIR="$PKG" install
+}

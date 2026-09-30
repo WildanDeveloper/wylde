@@ -72,6 +72,7 @@ mkdir -p "$MNT"/{dev,proc,sys}
 mount --bind /dev "$MNT/dev"
 mount -t proc proc "$MNT/proc"
 mount -t sysfs sysfs "$MNT/sys"
+mkdir -p "$MNT/boot/grub"
 chroot "$MNT" /usr/sbin/grub-install --target=i386-pc "$LOOP" --recheck
 # grub-mkconfig derives root= from the running system, which is the loop device;
 # force the name the guest will actually see (sda for the IDE disk in QEMU)
