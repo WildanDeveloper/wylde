@@ -347,3 +347,24 @@ The QEMU test harness originally waited on prompt regexes and spent 90 s per
 check on timeouts. It now appends a unique sentinel to each command and matches
 it line-anchored (`\r?$`): all 21 checks finish in under a second, and a full
 "sync + boot + verify" cycle is about two minutes instead of ten.
+
+### neovim: deferred, and why
+`neovim` (roadmap 2e) turned into a dependency chain — cmake, lua 5.1 (for its
+code generation), libuv, then luv, which vendors LuaJIT and fails its own
+architecture probe (`deps/luajit.cmake` compiles a test including `lj_arch.h`
+before that include path exists). Each fix is upstream-specific, and after luv
+neovim still wants utf8proc, libtermkey, msgpack and tree-sitter grammars.
+
+Rather than spend the effort there, Wylde installs the three ports that are
+useful on their own — **cmake 4.4.3**, **lua 5.1.5**, **libuv 1.53.0** — and
+defers the editor to phase 4, where a graphical release wants one anyway. Broken
+recipes are not committed: `ports/` only holds ports that build.
+
+### lua 5.1.5 needs the old dialect
+```
+luaconf.h:275:10: fatal error: readline/readline.h: No such file or directory
+```
+Two fixes: build the `posix` target instead of `linux` (no readline dependency
+until readtext is ported), and force `MYCFLAGS="-O2 -std=gnu89 -fPIC"` — code
+from 2011 predates the C99 implicit-declaration rules that gcc 14 turned into
+errors.

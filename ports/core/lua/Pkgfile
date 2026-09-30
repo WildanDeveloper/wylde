@@ -1,0 +1,14 @@
+name=lua
+version=5.1.5
+description="Lua 5.1 reference interpreter: neovim needs it to generate code at build time"
+license=MIT
+source=https://www.lua.org/ftp/lua-$version.tar.gz
+checksum(https://www.lua.org/ftp/lua-$version.tar.gz)=2640fc56a795f29d28ef15e13c34a47e223960b0240e8cb0a82d9b0738695333
+
+build() {
+    # lua 5.1 is from 2011 and predates C99 implicit-declaration rules: gcc 14+
+    # makes those errors, so force the old dialect it was written in
+    make posix MYCFLAGS="-O2 -std=gnu89 -fPIC" MYLIBS="-Wl,-E -ldl"
+    make install INSTALL_TOP="$PKG/usr"
+    find "$PKG" -type f -exec strip --strip-unneeded {} + 2>/dev/null || true
+}

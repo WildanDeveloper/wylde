@@ -1,0 +1,19 @@
+name=libuv
+version=1.53.0
+description="Multi-platform support library with a focus on asynchronous I/O"
+license=MIT
+source=https://github.com/libuv/libuv/archive/refs/tags/v$version.tar.gz
+checksum(https://github.com/libuv/libuv/archive/refs/tags/v$version.tar.gz)=279f3f67a24bb9921fe999ca6cd5e332fade8d515873ef9ba054b70e70a31d9e
+
+build() {
+    cmake -S . -B build \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DBUILD_SHARED_LIBS=ON \
+        -DLIBUV_BUILD_SHARED=ON \
+        -DLIBUV_BUILD_TESTS=OFF \
+        -DLIBUV_BUILD_BENCH=OFF
+    cmake --build build
+    DESTDIR="$PKG" cmake --install build
+    find "$PKG" -name '*.so*' -exec strip --strip-unneeded {} + 2>/dev/null || true
+}
