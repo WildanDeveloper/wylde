@@ -136,18 +136,10 @@ impl PortTree {
         fs::create_dir_all(&src_dir).map_err(|e| e.to_string())?;
         for url in pkgfile.sources() {
             let url = expand(&url, pkgfile);
-            let file = src_dir.join(url.rsplit('/').next().unwrap_or("source"));
+            let file = src_dir.join(cache_name(pkgfile, &url));
             if !file.exists() {
                 println!("==> fetching {}", url);
-                let status = Command::new("curl")
-                    .args(["-fsSL", "-o"])
-                    .arg(&file)
-                    .arg(&url)
-                    .status()
-                    .map_err(|e| format!("cannot run curl: {}", e))?;
-                if !status.success() {
-                    return Err(format!("download failed: {}", url));
-                }
+                fetch(&url, &file)?;
             }
             if let Some(expected) = pkgfile.checksum(&url) {
                 if expected != "-" {
@@ -160,7 +152,7 @@ impl PortTree {
         // unpack: every source tarball lands next to the scratch build
         for url in pkgfile.sources() {
             let url = expand(&url, pkgfile);
-            let file = src_dir.join(url.rsplit('/').next().unwrap_or("source"));
+            let file = src_dir.join(cache_name(pkgfile, &url));
             if !file.exists() {
                 continue;
             }
@@ -244,6 +236,47 @@ impl PortTree {
 pub struct Build {
     pub stage: PathBuf,
     pub files: Vec<PathBuf>,
+}
+
+/// Where a source is cached: package name plus the last URL path component, so
+/// two ports can never clobber each other's tarball.
+fn cache_name(pkgfile: &Pkgfile, url: &str) -> String {
+    let tail = url
+        .split('?')
+        .next()
+        .unwrap_or(url)
+        .rsplit('/')
+        .next()
+        .filter(|s| !s.is_empty())
+        .unwrap_or("source");
+    format!("{}-{}", pkgfile.name(), tail)
+}
+
+/// Fetch a URL with whatever downloader the system has. A distro built from
+/// scratch has no curl on day one, so wget is tried too.
+fn fetch(url: &str, dest: &Path) -> Result<(), String> {
+    let attempts: [(&str, Vec<&str>); 2] = [
+        ("curl", vec!["-fsSL", "-o"]),
+        ("wget", vec!["-q", "-O"]),
+    ];
+    let ca = "/etc/ssl/certs/ca-certificates.crt";
+    let mut last = String::new();
+    for (program, args) in attempts {
+        let mut command = Command::new(program);
+        command.args(&args).arg(dest).arg(url);
+        // wget and curl each look for the CA bundle in their own compiled-in
+        // path; Wylde keeps it in one place and says so explicitly
+        if Path::new(ca).exists() {
+            command.env("SSL_CERT_FILE", ca);
+            command.env("CURL_CA_BUNDLE", ca);
+        }
+        match command.status() {
+            Ok(status) if status.success() => return Ok(()),
+            Ok(_) => last = format!("{} failed", program),
+            Err(e) => last = format!("{}: {}", program, e),
+        }
+    }
+    Err(format!("cannot fetch {} ({})", url, last))
 }
 
 fn single_dir(dir: &Path) -> Option<PathBuf> {

@@ -1,0 +1,17 @@
+name=htop
+version=3.4.1
+description="Interactive process viewer: real CPU and memory usage per process"
+license=GPL-2.0-or-later
+source=https://github.com/htop-dev/htop/archive/refs/tags/$version.tar.gz
+checksum(https://github.com/htop-dev/htop/archive/refs/tags/$version.tar.gz)=af9ec878f831b7c27d33e775c668ec79d569aa781861c995a0fbadc1bdb666cf
+
+build() {
+    # GitHub release archives ship without a generated configure script
+    [ -f configure ] || ./autogen.sh
+    ./configure --prefix=/usr \
+                --sysconfdir=/etc \
+                --enable-unicode \
+                --disable-utempter
+    make
+    make DESTDIR="$PKG" install
+}
