@@ -1,0 +1,12 @@
+name=bc
+version=7.1.0
+description="GNU bc language interpreter for arbitrary precision arithmetic"
+license=GPL-2.0-or-later
+source=https://github.com/gavinhoward/bc/archive/refs/tags/$version.tar.gz
+checksum(https://github.com/gavinhoward/bc/archive/refs/tags/$version.tar.gz)=e30f44bcf6ea4f2a7a25de06267df17d0a9dfef8a9d4e59822d0b794bfc15b24
+
+build() {
+    CC="gcc -std=c99" ./configure --prefix=/usr -G -O3 -r
+     make
+     make DESTDIR="$PKG" install
+}

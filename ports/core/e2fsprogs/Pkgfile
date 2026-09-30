@@ -1,0 +1,25 @@
+name=e2fsprogs
+version=1.47.3
+description="Ext2/3/4 filesystem utilities: mkfs.ext4, fsck"
+license=GPL-2.0-or-later
+source=https://mirrors.edge.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v$version/e2fsprogs-$version.tar.gz
+checksum(https://mirrors.edge.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v$version/e2fsprogs-$version.tar.gz)=2f5164e64dd7d91eadd1e0e8a77d92c06dd7837bb19f1d9189ce1939b363d2b4
+depends="libcap openssl util-linux"
+
+build() {
+    mkdir -v build
+     cd       build
+     ../configure --prefix=/usr       \
+                  --sysconfdir=/etc   \
+                  --enable-elf-shlibs \
+                  --disable-libblkid  \
+                  --disable-libuuid   \
+                  --disable-uuidd     \
+                  --disable-fsck
+     make
+     make DESTDIR="$PKG" install
+     rm -fv "$PKG/usr/lib/libcom_err.a" "$PKG/usr/lib/libe2p.a" "$PKG/usr/lib/libext2fs.a" "$PKG/usr/lib/libss.a"
+     gunzip -v "$PKG/usr/share/info/libext2fs.info.gz"
+     install-info --dir-file="$PKG/usr/share/info/dir" "$PKG/usr/share/info/libext2fs.info"
+     sed 's/metadata_csum_seed,//' -i "$PKG/etc/mke2fs.conf"
+}

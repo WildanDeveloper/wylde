@@ -1,0 +1,17 @@
+name=sysklogd
+version=2.7.2
+description="System logger that reads kernel messages"
+license=BSD-3-Clause
+source=https://github.com/torsten-ochsenknecht/sysklogd/archive/refs/tags/sysklogd-$version.tar.gz
+checksum(https://github.com/torsten-ochsenknecht/sysklogd/archive/refs/tags/sysklogd-$version.tar.gz)=bc410ca64551a11fac6518b418fb6b8afbd888a70af2c5eb353334a706727bca
+
+build() {
+    ./configure --prefix=/usr \
+                 --sysconfdir=/etc  \
+                 --runstatedir=/run \
+                 --without-logger   \
+                 --disable-static   \
+                 --docdir=/usr/share/doc/sysklogd-2.7.2
+     make
+     make DESTDIR="$PKG" install
+}

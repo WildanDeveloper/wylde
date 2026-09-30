@@ -1,0 +1,13 @@
+name=automake
+version=1.18.1
+description="Generate Makefile.in files"
+license=GPL-3.0-or-later
+source=https://ftp.gnu.org/gnu/automake/automake-$version.tar.xz
+checksum(https://ftp.gnu.org/gnu/automake/automake-$version.tar.xz)=168aa363278351b89af56684448f525a5bce5079d0b6842bd910fdd3f1646887
+depends="autoconf perl"
+
+build() {
+    ./configure --prefix=/usr --docdir=/usr/share/doc/automake-1.18.1
+     make
+     make DESTDIR="$PKG" install
+}

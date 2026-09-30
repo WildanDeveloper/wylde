@@ -1,0 +1,14 @@
+name=ninja
+version=1.13.1
+description="Small build system with few dependencies"
+license=Apache-2.0
+source=https://github.com/ninja-build/ninja/archive/refs/tags/v$version.tar.gz
+checksum(https://github.com/ninja-build/ninja/archive/refs/tags/v$version.tar.gz)=f0055ad0369bf2e372955ba55128d000cfcc21777057806015b45e4accbebf23
+depends="python"
+
+build() {
+    [ -f configure.py ] || autoreconf -fi
+     sed -i '/int Guess/a  int   j = 0; char* jobs = getenv( "NINJAJOBS" ); if ( jobs != NULL ) j = atoi( jobs ); if ( j > 0 ) return j; ' src/ninja.cc
+     python3 configure.py --bootstrap
+     install -vm755 ninja "$PKG/usr/bin/ninja"
+}

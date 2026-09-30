@@ -1,0 +1,16 @@
+name=python
+version=3.13.7
+description="Python 3 programming language interpreter"
+license=PSF-2.0
+source=https://www.python.org/ftp/python/$version/Python-$version.tar.xz
+checksum(https://www.python.org/ftp/python/$version/Python-$version.tar.xz)=5462f9099dfd30e238def83c71d91897d8caa5ff6ebc7a50f14d4802cdaaa79a
+depends="zlib openssl ncurses"
+
+build() {
+    ./configure --prefix=/usr \
+                      --enable-shared \
+                      --without-ensurepip
+     make
+     make DESTDIR="$PKG" install
+     find "$PKG" -name '*.so' -exec strip --strip-unneeded {} + 2>/dev/null || true
+}

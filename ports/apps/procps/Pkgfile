@@ -1,0 +1,17 @@
+name=procps
+version=4.0.5
+description="Process utilities: ps, free, pgrep, sysctl"
+license=GPL-2.0-or-later
+source=https://sourceforge.net/projects/procps-ng/files/Production/procps-ng-$version/procps-ng-$version.tar.xz
+checksum(https://sourceforge.net/projects/procps-ng/files/Production/procps-ng-$version/procps-ng-$version.tar.xz)=c2e6d193cc78f84cd6ddb72aaf6d5c6a9162f0470e5992092057f5ff518562fa
+depends="ncurses"
+
+build() {
+    ./configure --prefix=/usr \
+                 --docdir=/usr/share/doc/procps-ng-4.0.5 \
+                 --disable-static                 \
+                 --disable-kill                   \
+                 --enable-watch8bit
+     make
+     make DESTDIR="$PKG" install
+}

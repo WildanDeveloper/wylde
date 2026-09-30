@@ -1,0 +1,13 @@
+name=bootscripts
+version=20250827
+description="LFS bootscripts: rc, mountfs, modules and friends" license=GPL-2.0-or-later
+source=https://www.linuxfromscratch.org/lfs/downloads/12.4/lfs-bootscripts-$version.tar.xz
+checksum(https://www.linuxfromscratch.org/lfs/downloads/12.4/lfs-bootscripts-$version.tar.xz)=13ee5d50b7a35f4d94760d9f7617a3f17af3e0a33118f415eb898a0276db47b3
+
+build() {
+    make DESTDIR="$PKG" install
+    # the runlevel symlinks the book creates by hand
+    for f in "$PKG"/etc/rc.d/*; do
+        ln -sf "../init.d/$(basename "$f")" "$f"
+    done
+}

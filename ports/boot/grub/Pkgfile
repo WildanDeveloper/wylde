@@ -1,0 +1,19 @@
+name=grub
+version=2.12
+description="The GRand Unified Bootloader" license=GPL-3.0-or-later
+source=https://ftp.gnu.org/gnu/grub/grub-$version.tar.xz
+checksum(https://ftp.gnu.org/gnu/grub/grub-$version.tar.xz)=f3c97391f7c4eaa677a78e090c7e97e6dc47b16f655f04683ebd37bef7fe0faa
+depends="gperf libtool autoconf automake flex bison"
+
+build() {
+    unset {C,CPP,CXX,LD}FLAGS
+    echo depends bli part_gpt > grub-core/extra_deps.lst
+    ./configure --prefix=/usr     \
+                --sysconfdir=/etc \
+                --disable-efiemu  \
+                --disable-werror
+    make
+    make DESTDIR="$PKG" install
+    mv -v "$PKG/etc/bash_completion.d/grub" "$PKG/usr/share/bash-completion/completions"
+    find "$PKG" -type f \( -name '*.so' -o -name 'grub-*' \) -exec strip --strip-unneeded {} + 2>/dev/null || true
+}

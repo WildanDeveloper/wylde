@@ -1,0 +1,16 @@
+name=pkgconf
+version=2.5.1
+description="Package configuration utility"
+license=ISC
+source=https://distfiles.dereferenced.org/pkgconf/pkgconf-$version.tar.gz
+checksum(https://distfiles.dereferenced.org/pkgconf/pkgconf-$version.tar.gz)=ab89d59810d9cad5dfcd508f25efab8ea0b1c8e7bad91c2b6351f13e6a5940d8
+depends=zlib
+
+build() {
+    ./configure --prefix=/usr \
+                 --disable-static \
+                 --docdir=/usr/share/doc/pkgconf-2.5.1
+     make
+     make DESTDIR="$PKG" install
+     ln -sv pkgconf "$PKG/usr/bin/pkg-config"
+}

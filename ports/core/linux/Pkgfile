@@ -1,0 +1,85 @@
+name=linux
+version=6.16.1
+description="The Wylde kernel"
+license=GPL-2.0-only
+source=https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$version.tar.xz
+checksum(https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$version.tar.xz)=ea43491bc7ace1e414b3b2d957f8cf96e7049155123f0acce798accf8da1acba
+
+build() {
+    # Wylde tuning: the kernel.org reference config is no longer published, so
+    # this starts from x86_64_defconfig and applies the Wylde set. Lean (no debug
+    # info, no module signing, no DRM/sound/WLAN/BT) but netfilter, ext4, virtio,
+    # ACPI and devtmpfs are in, and the 6.16 defconfig is nearly all built-in.
+    make x86_64_defconfig
+    ./scripts/config --file .config \
+        --disable DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT \
+        --enable  DEBUG_INFO_NONE \
+        --disable DEBUG_INFO_BTF \
+        --disable DEBUG_INFO_BTF_MODULE \
+        --disable DEBUG_KERNEL \
+        --disable KALLSYMS_ALL \
+        --enable  KALLSYMS \
+        --disable MODULE_SIG \
+        --disable MODULE_SIG_ALL \
+        --disable MODULE_SIG_FORCE \
+        --set-val MODULE_SIG_KEY "" \
+        --set-val SYSTEM_TRUSTED_KEYS "" \
+        --set-val SYSTEM_REVOCATION_KEYS "" \
+        --disable GCC_PLUGINS \
+        --disable GDB_SCRIPTS \
+        --disable DRM \
+        --disable SOUND \
+        --disable MEDIA_SUPPORT \
+        --disable WLAN \
+        --disable BT \
+        --enable  NETFILTER \
+        --enable  NETFILTER_XTABLES \
+        --enable  IP_NF_IPTABLES \
+        --enable  IP_NF_FILTER \
+        --enable  IP_NF_NAT \
+        --enable  IP_NF_TARGET_MASQUERADE \
+        --enable  NF_CONNTRACK \
+        --enable  BRIDGE \
+        --enable  BRIDGE_NETFILTER \
+        --enable  EXT4_FS \
+        --enable  EXT4_USE_FOR_EXT2 \
+        --enable  EXT4_FS_POSIX_ACL \
+        --enable  EXT4_FS_SECURITY \
+        --enable  TMPFS \
+        --enable  DEVTMPFS \
+        --enable  DEVTMPFS_MOUNT \
+        --enable  VIRTIO \
+        --enable  VIRTIO_PCI \
+        --enable  VIRTIO_BLK \
+        --enable  VIRTIO_NET \
+        --enable  VIRTIO_CONSOLE \
+        --enable  HW_RANDOM_VIRTIO \
+        --enable  ACPI \
+        --enable  PCI \
+        --enable  ATA_PIIX \
+        --enable  ATA \
+        --enable  BLK_DEV_SD \
+        --enable  SERIAL_8250 \
+        --enable  SERIAL_8250_CONSOLE \
+        --enable  PRINTK \
+        --enable  PRINTK_TIME \
+        --enable  MAGIC_SYSRQ \
+        --enable  DEVKMSG \
+        --enable  PROC_KMSG \
+        --disable IPV6_DEFAULT
+    make olddefconfig
+    make -j"$(nproc)" bzImage modules
+    make modules_install DESTDIR="$PKG"
+    mkdir -p "$PKG/boot"
+    cp -iv arch/x86/boot/bzImage "$PKG/boot/vmlinuz-$version-lfs-12.4"
+    cp -iv System.map "$PKG/boot/System.map-$version"
+    cp -iv .config "$PKG/boot/config-$version"
+    install -v -m755 -d "$PKG/etc/modprobe.d"
+    cat > "$PKG/etc/modprobe.d/usb.conf" << "CONF"
+# Begin /etc/modprobe.d/usb.conf
+install ohci_hcd /sbin/modprobe ehci_hcd ; /sbin/modprobe -i ohci_hcd ; true
+install uhci_hcd /sbin/modprobe ehci_hcd ; /sbin/modprobe -i uhci_hcd ; true
+# End /etc/modprobe.d/usb.conf
+CONF
+    find "$PKG" -name '*.ko' -exec strip --strip-unneeded {} + 2>/dev/null || true
+}

@@ -1,0 +1,12 @@
+name=gperf
+version=3.3
+description="Perfect hash function generator, used by bash and others"
+license=GPL-3.0-or-later
+source=https://ftp.gnu.org/gnu/gperf/gperf-$version.tar.gz
+checksum(https://ftp.gnu.org/gnu/gperf/gperf-$version.tar.gz)=fd87e0aba7e43ae054837afd6cd4db03a3f2693deb3619085e6ed9d8d9604ad8
+
+build() {
+    ./configure --prefix=/usr --docdir=/usr/share/doc/gperf-3.3
+     make
+     make DESTDIR="$PKG" install
+}

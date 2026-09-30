@@ -158,6 +158,16 @@ impl Pkgfile {
             .unwrap_or_default()
     }
 
+    /// Patches applied by `build()`. Same format as `source`; `wld` downloads
+    /// and verifies them before the build starts, so recipes reference a plain
+    /// filename instead of a URL (`patch` cannot read from http).
+    pub fn patches(&self) -> Vec<String> {
+        self.vars
+            .get("patches")
+            .map(|s| s.split_whitespace().map(str::to_string).collect())
+            .unwrap_or_default()
+    }
+
     pub fn checksum(&self, url: &str) -> Option<&str> {
         self.vars
             .get(&format!("checksum({})", url))

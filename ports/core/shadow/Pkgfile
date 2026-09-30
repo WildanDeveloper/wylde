@@ -1,0 +1,27 @@
+name=shadow
+version=4.18.0
+description="Password and account management tools"
+license=ISC
+source=https://github.com/shadow-maint/shadow/releases/download/$version/shadow-$version.tar.gz
+checksum(https://github.com/shadow-maint/shadow/releases/download/$version/shadow-$version.tar.gz)=ae486ce4c0bce55c42d76d8478e428c41586f1da2f89fbf5228243fb4d849db4
+depends="attr acl libxcrypt"
+
+build() {
+    sed -i 's/groups$(EXEEXT) //' src/Makefile.in
+     sed -e 's:#ENCRYPT_METHOD DES:ENCRYPT_METHOD YESCRYPT:' \
+         -e 's:/var/spool/mail:/var/mail:' \
+         -i etc/login.defs
+     touch /usr/bin/passwd
+     ./configure --sysconfdir=/etc           \
+                 --disable-static            \
+                 --with-libbsd=no --without-libbsd \
+                 --with-bcrypt --with-yescrypt \
+                 --with-group-name-max-length=32 \
+                 --without-libpam            \
+                 --without-selinux           \
+                 --disable-account-tools-setuid
+     make
+     make exec_prefix=/usr DESTDIR="$PKG" install
+     # pwconv/grpconv would rewrite the live /etc files; the port does not
+     cp -v "$PKG/etc/login.defs" /dev/null 2>/dev/null || true
+}

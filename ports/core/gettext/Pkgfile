@@ -1,0 +1,13 @@
+name=gettext
+version=0.26
+description="GNU internationalization utilities and runtime"
+license=GPL-3.0-or-later
+source=https://ftp.gnu.org/gnu/gettext/gettext-$version.tar.xz
+checksum(https://ftp.gnu.org/gnu/gettext/gettext-$version.tar.xz)=d1fb86e260cfe7da6031f94d2e44c0da55903dbae0a2fa0fae78c91ae1b56f00
+depends="ncurses"
+
+build() {
+    ./configure --disable-shared
+     make
+     cp -v gettext-tools/src/msgfmt gettext-tools/src/msgmerge gettext-tools/src/xgettext /usr/bin
+}

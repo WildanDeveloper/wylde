@@ -1,0 +1,14 @@
+name=dhcpcd
+version=10.5.2
+description="DHCPv4 and DHCPv6 client"
+license=ISC
+source=https://github.com/NetworkConfiguration/dhcpcd/archive/refs/tags/v$version.tar.gz
+checksum(https://github.com/NetworkConfiguration/dhcpcd/archive/refs/tags/v$version.tar.gz)=6040a01c69a17dc166d350f6dacf8444ab1e1945481bc84ff50d7ca74364b78d
+depends="udev"
+
+build() {
+    ./configure --prefix=/usr --sysconfdir=/etc --runstatedir=/run --dbdir=/var/lib/dhcpcd
+     make -j4
+     make DESTDIR="$PKG" install
+     mkdir -p "$PKG/var/lib/dhcpcd"
+}

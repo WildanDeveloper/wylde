@@ -1,0 +1,19 @@
+name=openssl
+version=3.5.2
+description="TLS and cryptography library"
+license=Apache-2.0
+source=https://github.com/openssl/openssl/releases/download/openssl-$version/openssl-$version.tar.gz
+checksum(https://github.com/openssl/openssl/releases/download/openssl-$version/openssl-$version.tar.gz)=c53a47e5e441c930c3928cf7bf6fb00e5d129b630e0aa873b08258656e7345ec
+depends="zlib"
+
+build() {
+    ./config --prefix=/usr \
+              --openssldir=/etc/ssl \
+              --libdir=lib          \
+              shared                \
+              zlib-dynamic
+     make
+     sed -i '/INSTALL_LIBS/s/libcrypto.a libssl.a//' Makefile
+     make MANSUFFIX=ssl DESTDIR="$PKG" install
+     find "$PKG" -name '*.so*' -exec strip --strip-unneeded {} + 2>/dev/null || true
+}

@@ -1,0 +1,13 @@
+name=sysvinit
+version=3.14
+description="System V init: the reference init Wylde replaced with its own, kept as fallback" license=public-domain
+source=https://github.com/slicer69/sysvinit/releases/download/3.14/sysvinit-$version.tar.xz
+checksum(https://github.com/slicer69/sysvinit/releases/download/3.14/sysvinit-$version.tar.xz)=c90874b8c054a35991fb8c4d30c443ed1e9b1815ff6165c7b483f558be4e4b53
+patches=https://www.linuxfromscratch.org/patches/lfs/12.4/sysvinit-$version-consolidated-1.patch
+checksum(https://www.linuxfromscratch.org/patches/lfs/12.4/sysvinit-$version-consolidated-1.patch)=a8d870f357aaae5f07478ea2953a76c245fc0b4d14cfbe1762ba5277308d4a89
+
+build() {
+    patch -Np1 -i "$PATCHDIR/sysvinit-3.14-consolidated-1.patch"
+    make
+    make DESTDIR="$PKG" install
+}

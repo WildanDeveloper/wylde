@@ -1,0 +1,24 @@
+name=perl
+version=5.42.0
+description="Practical Extraction and Report Language"
+license=Artistic-1.0-Perl
+source=https://github.com/Perl/perl5/archive/refs/tags/v$version.tar.gz
+checksum(https://github.com/Perl/perl5/archive/refs/tags/v$version.tar.gz)=e2bb05cea46921009b7902b927b58110949c4f8e51b0583f57e3e1eeff5306d8
+depends="curl"
+
+build() {
+    sh Configure -des \
+                      -D prefix=/usr                            \
+                      -D vendorprefix=/usr                      \
+                      -D useshrplib                             \
+                      -D privlib=/usr/lib/perl5/5.42/core_perl  \
+                      -D archlib=/usr/lib/perl5/5.42/core_perl  \
+                      -D sitelib=/usr/lib/perl5/5.42/site_perl  \
+                      -D sitearch=/usr/lib/perl5/5.42/site_perl \
+                      -D vendorlib=/usr/lib/perl5/5.42/vendor_perl \
+                      -D vendorarch=/usr/lib/perl5/5.42/vendor_perl
+     make
+     make install
+     # the port stages into $PKG, not the live system
+     rm -rf /usr/lib/perl5
+}

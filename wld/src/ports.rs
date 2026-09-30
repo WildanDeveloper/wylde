@@ -149,6 +149,22 @@ impl PortTree {
             }
         }
 
+        // patches: downloaded and verified next to the build, so build() can
+        // refer to them by filename
+        for url in pkgfile.patches() {
+            let url = expand(&url, pkgfile);
+            let file = work.join(url.rsplit('/').next().unwrap_or("patch"));
+            if !file.exists() {
+                println!("==> fetching patch {}", url);
+                fetch(&url, &file)?;
+            }
+            if let Some(expected) = pkgfile.checksum(&url) {
+                if expected != "-" {
+                    verify_checksum(&file, expected)?;
+                }
+            }
+        }
+
         // unpack: every source tarball lands next to the scratch build
         for url in pkgfile.sources() {
             let url = expand(&url, pkgfile);
@@ -177,10 +193,11 @@ impl PortTree {
         let destdir = std::env::var("WLD_DESTDIR").unwrap_or_else(|_| "/".to_string());
         let script = pkgfile.build.clone();
         let full = format!(
-            "set -e\nPKG='{}'\nDESTDIR='{}'\nSRCDIR='{}'\ncd '{}'\n{}\n",
+            "set -e\nPKG='{}'\nDESTDIR='{}'\nSRCDIR='{}'\nPATCHDIR='{}'\ncd '{}'\n{}\n",
             pkg_stage.display(),
             destdir,
             srcdir.display(),
+            work.display(),
             srcdir.display(),
             script
         );

@@ -43,10 +43,13 @@ def download(url: str, name: str) -> Path:
     target = SOURCES_CANDIDATES[-1] / name
     target.parent.mkdir(parents=True, exist_ok=True)
     print(f"  fetching {url}")
-    subprocess.run(
+    result = subprocess.run(
         ["curl", "-fsSL", "--retry", "3", "-o", str(target), url],
-        check=True,
+        check=False,
     )
+    if result.returncode != 0 or not target.exists() or target.stat().st_size == 0:
+        target.unlink(missing_ok=True)
+        return None
     return target
 
 
@@ -174,6 +177,9 @@ def main() -> int:
             url = record["source"].replace("$version", record["version"])
             if args.fetch:
                 found = download(url, tarball)
+                if found is None:
+                    missing.append((record["name"], f"unreachable: {url}"))
+                    continue
             else:
                 missing.append((record["name"], tarball))
                 continue

@@ -1,0 +1,25 @@
+name=libxcrypt
+version=4.4.38
+description="Modern libcrypt implementation with yescrypt"
+license=LGPL-2.1-or-later
+source=https://github.com/besser82/libxcrypt/releases/download/v$version/libxcrypt-$version.tar.xz
+checksum(https://github.com/besser82/libxcrypt/releases/download/v$version/libxcrypt-$version.tar.xz)=80304b9c306ea799327f01d9a7549bdb28317789182631f1b54f4511b4206dd6
+depends="attr"
+
+build() {
+    ./configure --prefix=/usr \
+                 --enable-hashes=strong,glibc  \
+                 --enable-obsolete-api=no      \
+                 --disable-static              \
+                 --disable-failure-tokens
+     make
+     make DESTDIR="$PKG" install
+     make distclean
+     ./configure --prefix=/usr                 \
+                 --enable-hashes=strong,glibc  \
+                 --enable-obsolete-api=glibc   \
+                 --disable-static              \
+                 --disable-failure-tokens
+     make
+     cp -av --remove-destination .libs/libcrypt.so.1* "$PKG/usr/lib"
+}

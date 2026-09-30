@@ -1,0 +1,12 @@
+name=texinfo
+version=7.2
+description="System for producing Info documentation"
+license=GPL-3.0-or-later
+source=https://ftp.gnu.org/gnu/texinfo/texinfo-$version.tar.xz
+checksum(https://ftp.gnu.org/gnu/texinfo/texinfo-$version.tar.xz)=0329d7788fbef113fa82cb80889ca197a344ce0df7646fe000974c5d714363a6
+
+build() {
+    ./configure --prefix=/usr
+     make
+     make DESTDIR="$PKG" install
+}

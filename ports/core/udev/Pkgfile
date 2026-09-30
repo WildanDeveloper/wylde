@@ -1,0 +1,49 @@
+name=udev
+version=257.8
+description="Device node manager, taken from systemd: the /dev populator" license=LGPL-2.1-or-later
+source=https://github.com/systemd/systemd/archive/v$version/systemd-$version.tar.gz
+checksum(https://github.com/systemd/systemd/archive/v$version/systemd-$version.tar.gz)=f280278161446fe3838bedb970c7b3998043ad107f7627735a81483218c6f6f9
+
+build() {
+    sed -e 's/GROUP="render"/GROUP="video"/' \
+        -e 's/GROUP="sgx", //' \
+        -i rules.d/50-udev-default.rules.in
+    sed -i '/systemd-sysctl/s/^/#/' rules.d/99-systemd.rules.in
+    sed -e '/NETWORK_DIRS/s/systemd/udev/' \
+        -i src/libsystemd/sd-network/network-util.h
+    mkdir -p build
+    cd       build
+    meson setup .. \
+        --prefix=/usr \
+        --buildtype=release \
+        -D mode=release \
+        -D dev-kvm-mode=0660 \
+        -D link-udev-shared=false \
+        -D logind=false \
+        -D vconsole=false
+    export udev_helpers=$(grep "'name' :" ../src/udev/meson.build | \
+        awk '{print $3}' | tr -d ",'" | grep -v 'udevadm')
+    ninja udevadm systemd-hwdb \
+        $(ninja -n | grep -Eo '(src/(lib)?udev|rules.d|hwdb.d)/[^ ]*') \
+        $(realpath libudev.so --relative-to .) \
+        $udev_helpers
+    install -vm755 -d "$PKG/usr/lib/udev/hwdb.d" "$PKG/usr/lib/udev/rules.d" "$PKG/usr/lib/udev/network"
+    install -vm755 -d "$PKG/etc/udev/hwdb.d" "$PKG/etc/udev/rules.d" "$PKG/etc/udev/network"
+    install -vm755 -d "$PKG/usr/lib/pkgconfig" "$PKG/usr/share/pkgconfig" "$PKG/usr/include"
+    install -vm755 udevadm "$PKG/usr/bin/"
+    install -vm755 systemd-hwdb "$PKG/usr/bin/udev-hwdb"
+    ln -svfn ../bin/udevadm "$PKG/usr/sbin/udevd"
+    cp -av libudev.so.1.* "$PKG/usr/lib/"
+    ln -sf libudev.so.1 "$PKG/usr/lib/libudev.so"
+    install -vm644 ../src/libudev/libudev.h "$PKG/usr/include/"
+    install -vm644 src/libudev/*.pc "$PKG/usr/lib/pkgconfig/"
+    install -vm644 src/udev/*.pc "$PKG/usr/share/pkgconfig/"
+    install -vm644 ../src/udev/udev.conf "$PKG/etc/udev/"
+    install -vm644 rules.d/* ../rules.d/README "$PKG/usr/lib/udev/rules.d/"
+    install -vm644 $(find ../rules.d/*.rules -not -name '*power-switch*') "$PKG/usr/lib/udev/rules.d/"
+    install -vm644 hwdb.d/* ../hwdb.d/{*.hwdb,README} "$PKG/usr/lib/udev/hwdb.d/"
+    install -vm755 $udev_helpers "$PKG/usr/lib/udev"
+    install -vm644 ../network/99-default.link "$PKG/usr/lib/udev/network"
+    unset udev_helpers
+    find "$PKG" -name '*.so*' -exec strip --strip-unneeded {} + 2>/dev/null || true
+}

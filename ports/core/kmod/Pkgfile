@@ -1,0 +1,14 @@
+name=kmod
+version=34.2
+description="Tools for managing kernel modules" license=LGPL-2.1-or-later
+source=https://www.kernel.org/pub/linux/utils/kernel/kmod/kmod-$version.tar.xz
+checksum(https://www.kernel.org/pub/linux/utils/kernel/kmod/kmod-$version.tar.xz)=5a5d5073070cc7e0c7a7a3c6ec2a0e1780850c8b47b3e3892226b93ffcb9cb54
+depends=zlib zstd
+
+build() {
+    # -D openssl=disabled: Wylde does not sign kernel modules
+    meson setup --prefix=/usr .. --buildtype=release -D manpages=false -D openssl=disabled
+    ninja
+    DESTDIR="$PKG" ninja install
+    find "$PKG" -name '*.so*' -exec strip --strip-unneeded {} + 2>/dev/null || true
+}

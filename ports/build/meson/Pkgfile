@@ -1,0 +1,26 @@
+name=meson
+version=1.8.3
+description="Build system generator, used to build kmod and others" license=Apache-2.0
+source=https://github.com/mesonbuild/meson/releases/download/1.8.3/meson-$version.tar.gz
+checksum(https://github.com/mesonbuild/meson/releases/download/1.8.3/meson-$version.tar.gz)=f118aa910fc0a137cc2dd0122232dbf82153d9a12fb5b0f5bb64896f6a157abf
+
+build() {
+    # The book installs meson with pip3, but the base Python is
+    # --without-ensurepip. Install from the source tree with a shim that puts
+    # the tree on sys.path. Do not chdir in the shim: meson resolves its
+    # source dir relative to the caller's cwd.
+    mkdir -p "$PKG/usr/lib/meson" "$PKG/usr/bin" "$PKG/usr/share/bash-completion/completions"
+    cp -a . "$PKG/usr/lib/meson/"
+    cat > "$PKG/usr/bin/meson" << "WRAP"
+#!/usr/bin/env python3
+import sys
+sys.path.insert(0, "/usr/lib/meson")
+from mesonbuild import mesonmain
+sys.exit(mesonmain.main())
+WRAP
+    chmod 755 "$PKG/usr/bin/meson"
+    install -m644 data/shell-completions/bash/meson "$PKG/usr/share/bash-completion/completions/meson"
+    rm -rf "$PKG/usr/lib/meson/test cases" "$PKG/usr/lib/meson/docs"
+    # the shim is installed from $PKG, but at runtime it reads /usr/lib/meson
+    sed -i "s|/usr/lib/meson|$PKG/usr/lib/meson|" "$PKG/usr/bin/meson"
+}
