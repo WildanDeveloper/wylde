@@ -1,0 +1,47 @@
+name=git
+version=2.54.0
+description="Distributed version control system"
+license=GPL-2.0-only
+source=https://mirrors.edge.kernel.org/pub/software/scm/git/git-$version.tar.xz
+checksum(https://mirrors.edge.kernel.org/pub/software/scm/git/git-$version.tar.xz)=f689162364c10de79ef89aa8dbf48731eb057e34edbbd20aca510ce0154681a3
+
+build() {
+    # Wylde notes: git 2.55 and newer build libgitcore, which needs a Rust
+    # toolchain. Wylde is not carrying cargo in the base system, so it tracks
+    # 2.54.0 — the last release that builds with C alone.
+    # NO_GETTEXT drops the gettext dependency until gettext is ported.
+    # CFLAGS without -g: git defaults to -O2 -g, which makes each of the ~180
+    # installed binaries 20 MB. GIT_INSTALL_STRATEGY=hardlink keeps them as one
+    # copy on disk instead of 180. Default strategy 'copy' = 2.9 GB installed.
+    NO_GETTEXT=1 CFLAGS="-O2 -pipe" ./configure --prefix=/usr \
+                      --sysconfdir=/etc                \
+                      --libexecdir=/usr/libexec          \
+                      --with-git-path=/usr/lib/git-core \
+                      --with-curl                      \
+                      --with-openssl                    \
+                      --without-python
+    make
+    make GIT_INSTALL_STRATEGY=hardlink DESTDIR="$PKG" install
+    # strip the staged binaries: git does not strip by default
+    if ! find "$PKG" -type f -exec strip --strip-unneeded {} + 2>/dev/null; then
+        echo "strip: some files could not be stripped (ignored)"
+    fi
+
+    # git installs ~180 byte-identical copies of the same binary. Collapse them
+    # into hardlinks: 4 MB on disk instead of 750 MB. This is the whole reason
+    # "complete, but lean" needs a package manager that knows what it installed.
+    GITBIN="$PKG/usr/libexec/git-core/git"
+    ls -1 "$PKG/usr/libexec/git-core" 2>/dev/null | wc -l
+    if [ -f "$GITBIN" ]; then
+        SUM=$(sha256sum "$GITBIN" | cut -d' ' -f1)
+        SIZE=$(stat -c %s "$GITBIN")
+        for f in "$PKG"/usr/libexec/git-core/* "$PKG"/usr/bin/git-*; do
+            if [ ! -f "$f" ]; then continue; fi
+            if [ "$f" = "$GITBIN" ]; then continue; fi
+            if [ "$(stat -c %s "$f")" != "$SIZE" ]; then continue; fi
+            if [ "$(sha256sum "$f" | cut -d' ' -f1)" != "$SUM" ]; then continue; fi
+            rm -f "$f"
+            ln "$GITBIN" "$f"
+        done
+    fi
+}

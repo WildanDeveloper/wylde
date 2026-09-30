@@ -228,13 +228,21 @@ fn build_date() -> String {
     format!("{:04}-{:02}-{:02}", y, m, d)
 }
 
-/// Total size in bytes of a list of paths (files only; links count as 0).
+/// Total size in bytes of a list of paths (files only; symlinks count as 0).
+///
+/// Hardlinked files are counted once: `git` installs ~180 hardlinks to the
+/// same binary, and adding each path separately would report gigabytes that do
+/// not exist on disk.
 pub fn total_size(files: &[PathBuf]) -> u64 {
+    use std::os::unix::fs::MetadataExt;
+    let mut seen: std::collections::HashSet<(u64, u64)> = std::collections::HashSet::new();
     let mut total = 0;
     for file in files {
         if let Ok(meta) = fs::symlink_metadata(file) {
             if meta.is_file() {
-                total += meta.len();
+                if seen.insert((meta.dev(), meta.ino())) {
+                    total += meta.len();
+                }
             }
         }
     }
@@ -309,6 +317,18 @@ mod tests {
         let files = db.forget(&pkg).unwrap();
         assert_eq!(files.len(), 1);
         assert!(db.installed().unwrap().is_empty());
+    }
+
+    #[test]
+    fn hardlinks_counted_once() {
+        let (_d, db) = tmp_db();
+        let a = _d.path().join("a");
+        let b = _d.path().join("b");
+        fs::write(&a, b"0123456789").unwrap();
+        fs::hard_link(&a, &b).unwrap();
+        let total = total_size(&[a.clone(), b.clone()]);
+        assert_eq!(total, 10);
+        let _ = db;
     }
 
     #[test]

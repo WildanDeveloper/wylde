@@ -207,7 +207,13 @@ impl PortTree {
     /// were actually written. This is the list `remove` later deletes, which is
     /// why nothing may be created outside the staging root before this point.
     pub fn install(build: &Build, destdir: &Path) -> Result<Vec<PathBuf>, String> {
+        use std::os::unix::fs::MetadataExt;
         let mut installed = Vec::new();
+        // staged path -> (inode, destination), so files that the build already
+        // hardlinked together stay one copy after installation
+        let mut by_inode: std::collections::HashMap<(u64, u64), (PathBuf, PathBuf)> =
+            std::collections::HashMap::new();
+
         for relative in &build.files {
             let from = build.stage.join(relative);
             let to = destdir.join(relative);
@@ -222,9 +228,15 @@ impl PortTree {
             } else if meta.is_dir() {
                 fs::create_dir_all(&to).map_err(|e| e.to_string())?;
                 fs::set_permissions(&to, meta.permissions()).map_err(|e| e.to_string())?;
+            } else if let Some((_, original)) = by_inode.get(&(meta.dev(), meta.ino())) {
+                let _ = fs::remove_file(&to);
+                if fs::hard_link(original, &to).is_err() {
+                    fs::copy(&from, &to).map_err(|e| e.to_string())?;
+                }
             } else {
                 fs::copy(&from, &to).map_err(|e| e.to_string())?;
                 fs::set_permissions(&to, meta.permissions()).map_err(|e| e.to_string())?;
+                by_inode.insert((meta.dev(), meta.ino()), (from.clone(), to.clone()));
             }
             installed.push(relative.clone());
         }
