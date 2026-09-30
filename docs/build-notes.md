@@ -284,3 +284,66 @@ tests.
 
 
 
+
+---
+
+## Phase 2b/2e — the package manager used on itself
+
+Porting apps with `wld` inside the running target system (not on the host)
+found real bugs in both the manager and the ports.
+
+### `wld`: no downloader on day one
+The first port could not fetch its source: a distro built from scratch has no
+`curl` and no `wget` when `wld` starts. `wld` now tries `curl`, then `wget`, and
+sets `SSL_CERT_FILE`/`CURL_CA_BUNDLE` to `/etc/ssl/certs/ca-certificates.crt`
+explicitly, because both tools look in their own compiled-in paths.
+
+### `wget`: rc=5, "cannot verify github.com's certificate"
+Same root cause from the other side: no CA bundle in the chroot. Bootstrapped by
+copying the host's bundle into `/etc/ssl/certs/`.
+
+### Cache files collided
+Sources were cached under their URL's last path component, so any two ports with
+a `3.4.1.tar.gz` would clobber each other, and a failed download left a
+truncated tarball that unpacked forever after. Cached names are now
+`<package>-<last component>`, and a mismatched checksum aborts the build.
+
+### `sudo --with-passwd does not take an argument`
+It is a boolean flag (use shadow's `passwd`). `--with-group` likewise.
+
+### rsync needed xxhash, lz4 and libidn2
+rsync 3.5.1 aborts unless each is found or explicitly disabled. Ported xxhash
+0.8.4 and lz4 1.10.0 (both small and useful), disabled IDN (which would pull in
+libunistring).
+
+### git 2.55+ needs a Rust toolchain
+`make` stops with `CARGO target/release/libgitcore.a` — from 2.55 on, git builds
+a Rust core. Wylde does not carry cargo in the base system, so it tracks 2.54.0,
+the last C-only release. Documented in the Pkgfile.
+
+### git installed 2.9 GB, now 38 MB
+Two separate problems, both real bugs in `wld`:
+
+1. git installs ~180 byte-identical copies of one binary. The port now collapses
+   them into hardlinks after staging.
+2. `wld install` used `fs::copy()` per path, which *broke* those hardlinks, and
+   `total_size` counted every path separately, reporting 2.9 GiB of files that
+   were never on disk together. Fixed both: install now maps staged inodes to
+   one destination plus hardlinks, and size accounting counts each inode once.
+
+Result: `git-core` went from 614 MB on disk to 24 MB. For a project whose first
+principle is "not a single byte more", a package manager that copies 180 times
+what it needs to link once is not acceptable.
+
+### Boot-time bug found by the new init
+`dhcpcd -b` forks into the background, so init saw it exit, respawned it six
+times, then gave up — leaving the system with no network and no explanation
+beyond one line. `dhcpcd -B` keeps it in the foreground with a pid init owns.
+Hostname was `(none)` at the login prompt until a one-shot `hostname` service
+was added.
+
+### Iteration cost
+The QEMU test harness originally waited on prompt regexes and spent 90 s per
+check on timeouts. It now appends a unique sentinel to each command and matches
+it line-anchored (`\r?$`): all 21 checks finish in under a second, and a full
+"sync + boot + verify" cycle is about two minutes instead of ten.
