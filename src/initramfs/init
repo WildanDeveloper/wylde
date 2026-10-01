@@ -1,0 +1,33 @@
+#!/bin/sh
+# wylde initramfs init: mount what the guest needs, find the root, hand over.
+# Runs as PID 1 in the initramfs. Everything it does is printed.
+
+export PATH=/bin
+
+/bin/mount -t proc     proc     /proc 2>/dev/null
+/bin/mount -t sysfs    sysfs    /sys  2>/dev/null
+/bin/mount -t devtmpfs devtmpfs /dev  2>/dev/null
+
+root_spec="$1"
+if [ -z "$root_spec" ]; then
+    for word in $(cat /proc/cmdline 2>/dev/null); do
+        case "$word" in
+            root=*) root_spec="${word#root=}" ;;
+        esac
+    done
+fi
+
+echo "[initramfs] root spec: ${root_spec:-<none>}"
+
+/bin/probe "$root_spec" || {
+    echo "[initramfs] probe failed, dropping to a shell"
+    exec /bin/sh
+}
+
+# move the real system's virtual filesystems onto the new root
+/bin/mount --move /dev  /newroot/dev  2>/dev/null
+/bin/mount --move /proc /newroot/proc 2>/dev/null
+/bin/mount --move /sys  /newroot/sys  2>/dev/null
+
+echo "[initramfs] handing over to the real init"
+exec /bin/busybox switch_root /newroot /sbin/wylde-init

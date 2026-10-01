@@ -1,2 +1,5 @@
 ROADMAP.md
 roadmap.md
+build/initramfs.cpio.gz
+wld/target/
+src/doctor/target/
