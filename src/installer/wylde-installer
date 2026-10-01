@@ -3,8 +3,6 @@
 set -e
 
 VERSION=0.1-alpha
-KERNEL=6.16.1
-LFS_BOOTSCRIPTS=20250827
 MOUNT=/mnt/wylde
 
 usage() {

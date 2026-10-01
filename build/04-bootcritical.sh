@@ -238,11 +238,13 @@ EOF
 stage ncurses <<'EOF'
 set -e
 cd /sources
-rm -rf ncurses-6.6-20260926
-tar -xf ncurses-6.6-20260926.tgz
-cd ncurses-6.6-20260926
-# DEVIATION: the book pins ncurses-6.5-20250809.tgz, which no longer exists on
-# any mirror. This is the current upstream snapshot; no patches are involved.
+rm -rf ncurses-6.6
+tar -xf ncurses-6.6.tar.gz
+cd ncurses-6.6
+# DEVIATION: the book pins a dated ncurses snapshot from a mirror that no longer
+# exists, and the snapshots upstream keeps in current/ are deleted after a few
+# weeks. A tagged release from ftp.gnu.org is stable forever and carries the same
+# code; reproducibility beats chasing last week's nightly.
 ./configure --prefix=/usr           \
             --mandir=/usr/share/man \
             --with-shared           \

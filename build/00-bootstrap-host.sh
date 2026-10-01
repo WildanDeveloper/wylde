@@ -17,6 +17,15 @@ STATE=/var/lib/wylde-bootstrap
 log() { echo "[bootstrap] $*"; }
 die() { echo "[bootstrap] fatal: $*" >&2; exit 1; }
 
+# chown only what lives on the target filesystem. A rebuild host may have
+# /proc, /sys and /dev bind-mounted under $LFS, and chown -R would then walk
+# /proc/sys/net and print thousands of "operation not permitted" lines.
+own_tree() {
+    find "$1" -xdev \
+        \( -path "$1/proc" -o -path "$1/sys" -o -path "$1/dev" -o -path "$1/run" \) -prune \
+        -o -exec chown lfs:lfs {} + 2>/dev/null || true
+}
+
 [ "$(id -u)" = 0 ] || die "must run as root"
 log "$(uname -srm), $(awk -F: '/^VERSION_ID/{print $2}' /etc/os-release 2>/dev/null | tr -d '\"')"
 
@@ -68,7 +77,7 @@ done
 case $(uname -m) in
     x86_64) mkdir -pv "$LFS/lib64" ;;
 esac
-chown -R lfs:lfs "$LFS"
+own_tree "$LFS"
 
 # ------------------------------------------------------------------- sources
 
@@ -76,8 +85,18 @@ mkdir -p "$STATE"
 WGET_LIST=$STATE/wget-list
 MD5SUMS=$STATE/md5sums
 
-if [ ! -s "$WGET_LIST" ]; then
-    log "fetching the LFS $LFS_VER source list"
+# The pinned list in sources/ is what this system was actually built from and is
+# the one the recipes expect: upstream republishes the LFS source list when a
+# package is revised, which would silently change what CI compiles. Pin first,
+# fall back to upstream only when the repo copy is missing.
+PINNED=${PINNED_SOURCES:-$(cd "$(dirname "$0")/.." && pwd)/sources}
+
+if [ -s "$PINNED/wget-list" ] && [ -s "$PINNED/md5sums" ]; then
+    log "using the pinned source list from $PINNED"
+    cp "$PINNED/wget-list" "$WGET_LIST"
+    cp "$PINNED/md5sums" "$MD5SUMS"
+else
+    log "fetching the LFS $LFS_VER source list from upstream"
     curl -fsSL "https://www.linuxfromscratch.org/lfs/downloads/$LFS_VER/wget-list" -o "$WGET_LIST"
     curl -fsSL "https://www.linuxfromscratch.org/lfs/downloads/$LFS_VER/md5sums" -o "$MD5SUMS"
 fi
@@ -85,29 +104,79 @@ fi
 [ -s "$MD5SUMS" ] || die "could not fetch md5sums"
 
 total=$(grep -c . "$WGET_LIST")
-have=$(find "$SOURCES" -type f \( -name '*.tar.*' -o -name '*.patch' -o -name '*.diff' \) | wc -l)
-log "sources: $have of $total already present"
 
-if [ "$have" -lt "$total" ]; then
-    log "downloading the missing sources (this takes a while)"
-    missing=$STATE/wget-missing
-    : > "$missing"
-    while read -r url; do
-        [ -n "$url" ] || continue
-        name=${url##*/}
-        [ -f "$SOURCES/$name" ] || echo "$url" >> "$missing"
-    done < "$WGET_LIST"
-    log "$(grep -c . "$missing") files to fetch"
-    # four parallel streams: the mirrors throttle a single connection
-    split -n l/4 "$missing" "$STATE/part-"
-    for part in "$STATE"/part-*; do
-        wget -q --input-file="$part" --directory-prefix="$SOURCES" --continue &
-    done
-    wait
-fi
+wanted() {
+    # the basenames the book expects to find in the sources directory
+    sed 's/#.*//' "$WGET_LIST" | awk 'NF {n=$0; sub(/.*\//,"",n); print n}' | sort -u
+}
+
+have_count() {
+    local want
+    want=$(mktemp)
+    wanted > "$want"
+    local found=0 name
+    while read -r name; do
+        [ -s "$SOURCES/$name" ] && found=$((found + 1))
+    done < "$want"
+    rm -f "$want"
+    echo "$found"
+}
+
+log "sources: $(have_count) of $(wanted | wc -l) already present"
+
+# Downloads go through curl one file at a time with retries: mirrors reject or
+# truncate concurrent connections, and a silently half-fetched tarball only shows
+# up much later as a checksum error nobody can explain.
+for pass in 1 2 3; do
+    todo=$STATE/wget-todo.$pass
+    : > "$todo"
+    while read -r name; do
+        [ -s "$SOURCES/$name" ] || echo "$name" >> "$todo"
+    done < <(wanted)
+
+    count=$(grep -c . "$todo" || true)
+    [ "$count" -eq 0 ] && break
+    log "pass $pass: fetching $count file(s)"
+
+    # four at a time: enough to be quick, few enough to stay polite
+    fetch_one() {
+        name=$1
+        url=$(grep -E "/${name}\$" "$WGET_LIST" | head -1)
+        if [ -z "$url" ]; then
+            echo "  no url for $name" >&2
+            return 1
+        fi
+        if curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors \
+                -o "$SOURCES/$name.part" "$url"; then
+            mv "$SOURCES/$name.part" "$SOURCES/$name"
+            echo "  got $name"
+            return 0
+        fi
+        echo "  failed: $name" >&2
+        rm -f "$SOURCES/$name.part"
+        return 1
+    }
+    export -f fetch_one
+    export SOURCES WGET_LIST
+    xargs -a "$todo" -d '\n' -P 4 -I{} bash -c 'fetch_one "$@"' _ {} || true
+done
 
 log "verifying checksums"
-( cd "$SOURCES" && md5sum -c "$MD5SUMS" --quiet ) || die "source verification failed"
-chown -R lfs:lfs "$SOURCES"
+missing_md5=$STATE/missing-md5
+: > "$missing_md5"
+while read -r sum name; do
+    case "$name" in \#*) continue ;; esac
+    [ -s "$SOURCES/$name" ] || { echo "$name" >> "$missing_md5"; continue; }
+    actual=$(md5sum "$SOURCES/$name" | cut -d' ' -f1)
+    [ "$actual" = "$sum" ] || echo "$name (checksum mismatch)" >> "$missing_md5"
+done < <(sed 's/^[ *]*//' "$MD5SUMS" | grep -E '^[0-9a-f]{32} ')
+
+if [ -s "$missing_md5" ]; then
+    log "sources that could not be fetched or verified:"
+    sed 's/^/  /' "$missing_md5" >&2
+    die "the source set is incomplete — retry, or fetch the files above by hand into $SOURCES"
+fi
+
+own_tree "$SOURCES"
 
 log "host is ready: build/01-toolchain.sh can run now"

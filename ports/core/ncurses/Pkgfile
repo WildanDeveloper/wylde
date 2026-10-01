@@ -2,8 +2,8 @@ name=ncurses
 version=6.6
 description="Library for text-based user interfaces"
 license=MIT
-source=https://invisible-island.net/archives/ncurses/current/ncurses-$version-20260926.tgz
-checksum(https://invisible-island.net/archives/ncurses/current/ncurses-$version-20260926.tgz)=bc3ed46986165c0f69ab4b2b2c04907d4b042be35e18e35aeea9c80e0e292ac6
+source=https://ftp.gnu.org/gnu/ncurses/ncurses-$version.tar.gz
+checksum(https://ftp.gnu.org/gnu/ncurses/ncurses-$version.tar.gz)=355b4cbbed880b0381a04c46617b7656e362585d52e9cf84a67e2009b749ff11
 
 build() {
     mkdir build
