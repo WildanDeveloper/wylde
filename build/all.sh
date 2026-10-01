@@ -4,6 +4,15 @@
 set -e
 cd "$(dirname "$0")"
 
+# Building LFS means mounting filesystems and switching to the lfs user, which
+# is root work. Saying so up front beats a confusing "su: must be run from a
+# terminal" three seconds in.
+if [ "$(id -u)" -ne 0 ]; then
+    echo "build/all.sh must run as root (it mounts /proc, /sys and /dev into $LFS)" >&2
+    echo "try: sudo -E ./build/all.sh" >&2
+    exit 1
+fi
+
 echo "=== Wylde build start: $(date) ==="
 
 for phase in 01-toolchain 02-chroot 03-chroot-tools 04-bootcritical \

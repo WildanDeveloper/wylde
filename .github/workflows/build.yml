@@ -79,7 +79,9 @@ jobs:
         run: sudo ./build/00-bootstrap-host.sh
 
       - name: build the base system (LFS 12.4)
-        run: ./build/all.sh
+        # root: the build mounts /proc, /sys and /dev into the target and su's
+        # to the lfs user. -E keeps LFS, LOGDIR and MAKEFLAGS.
+        run: sudo -E ./build/all.sh
         env:
           LFS: /mnt/lfs
           LOGDIR: /tmp/wylde-build
