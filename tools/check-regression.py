@@ -12,6 +12,10 @@ import sys
 
 # How much a number may grow before the build fails. Boot time in QEMU under TCG
 # emulation is noisy, so it gets a wider window than memory.
+#
+# Boot time is only comparable when both runs used the same accelerator: a guest
+# on KVM boots roughly an order of magnitude faster than the same guest under TCG,
+# so comparing them would fail a perfectly healthy system (or pass a broken one).
 LIMITS = {
     "boot_seconds": 0.20,   # +20 %
     "ram_idle_kib": 0.05,   # +5 %
@@ -39,9 +43,24 @@ def main() -> int:
     print("-----------")
     failures = []
 
+    new_accel = new.get("accel", "unknown")
+    base_accel = baseline.get("accel", "unknown")
+
     for key, allowed in LIMITS.items():
         value = new.get(key)
         previous = baseline.get(key)
+
+        if key == "boot_seconds" and new_accel != base_accel:
+            print(
+                f"  {key:<16} not comparable: this run used {new_accel}, "
+                f"baseline used {base_accel}"
+            )
+            print(
+                f"  {'':<16} measured {value}s on {new_accel}; "
+                "memory is still enforced"
+            )
+            continue
+
         if value is None or previous in (None, 0):
             print(f"  {key:<16} no baseline, skipping")
             continue
@@ -58,6 +77,8 @@ def main() -> int:
     for key in ("ram_total_kib",):
         if new.get(key) and baseline.get(key):
             print(f"  {key:<16} {new[key]:>12}  baseline {baseline[key]:>12}")
+
+    print(f"  {'accel':<16} {new_accel:>12}  baseline {base_accel:>12}")
 
     if failures:
         print()

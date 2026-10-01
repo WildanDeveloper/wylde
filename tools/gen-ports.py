@@ -38,9 +38,9 @@ def find_source(tarball: str) -> Path | None:
     return None
 
 
-def download(url: str, name: str) -> Path:
+def download(url: str, name: str, into: Path | None = None) -> Path:
     """Fetch a source tarball so its real checksum can be recorded."""
-    target = SOURCES_CANDIDATES[-1] / name
+    target = (into or SOURCES_CANDIDATES[-1]) / name
     target.parent.mkdir(parents=True, exist_ok=True)
     print(f"  fetching {url}")
     result = subprocess.run(
@@ -164,7 +164,16 @@ def main() -> int:
     parser.add_argument("spec", type=Path)
     parser.add_argument("--check", action="store_true", help="only verify sources")
     parser.add_argument("--fetch", action="store_true", help="download missing sources")
+    parser.add_argument(
+        "--fetch-dir",
+        type=Path,
+        help="where --fetch puts tarballs (default: the local source cache)",
+    )
     args = parser.parse_args()
+
+    if args.fetch_dir:
+        args.fetch_dir.mkdir(parents=True, exist_ok=True)
+        globals()["SOURCES_CANDIDATES"] = [args.fetch_dir]
 
     records = load_spec(args.spec)
     missing = []
@@ -186,10 +195,17 @@ def main() -> int:
         record["sha256"] = sha256(found)
 
     if missing:
+        unreachable = [m for m in missing if "unreachable" in m[1]]
+        if unreachable:
+            print("unreachable sources:")
+            for name, why in unreachable:
+                print(f"  {name}: {why}")
+            return 1
         print("missing sources:")
         for name, tarball in missing:
             print(f"  {name}: {tarball}")
-        if args.check:
+        if args.check or args.fetch:
+            # --fetch is used by CI to prove the whole tree is buildable
             return 1
 
     for record in records:

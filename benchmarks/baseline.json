@@ -1,6 +1,7 @@
 {
+  "accel": "tcg",
   "boot_seconds": 63.47,
   "ram_total_kib": 2029112,
   "ram_idle_kib": 46252,
-  "_note": "measured under QEMU TCG emulation (no KVM), which inflates boot time; ram_idle_kib is a real number"
+  "_note": "measured under QEMU TCG emulation because this build host has no KVM; boot_seconds is therefore an emulation number, not a hardware one. CI with /dev/kvm records accel=kvm and skips the boot comparison."
 }

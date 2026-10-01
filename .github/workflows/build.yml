@@ -11,8 +11,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: build the system and measure it
+  base:
+    name: sources and port tree
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,27 +21,58 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            binutils bison flex gawk m4 texinfo wget curl git \
-            gcc g++ make xz-utils bzip2 \
-            qemu-system-x86 musl-tools musl-dev cpio \
-            rsync e2fsprogs
+            gcc g++ make bison flex m4 texinfo patch perl \
+            python3 xz-utils bzip2 wget curl git ca-certificates
 
-      - name: swap for the heavy compiler steps
+      - name: every source in the tree is downloadable and intact
+        # stronger than a local file check: proves every URL is alive and every
+        # checksum still matches upstream
         run: |
-          # gcc's insn-automata step needs more memory than a 7 GB runner has
-          sudo fallocate -l 6G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
+          mkdir -p /tmp/wylde-sources
+          python3 tools/gen-ports.py ports.spec --fetch --fetch-dir /tmp/wylde-sources
+
+      - name: every Pkgfile parses
+        working-directory: wld
+        run: |
+          cargo build --release
+          WLD_ROOT=$PWD/testroot ./target/release/wld ports | wc -l
+
+      - name: wld unit tests
+        working-directory: wld
+        run: cargo test
+
+  build:
+    name: build the system and measure it
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: host toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            binutils bison flex gawk m4 texinfo wget curl git ca-certificates \
+            gcc g++ make xz-utils bzip2 file \
+            qemu-system-x86 musl-tools musl-dev cpio \
+            rsync e2fsprogs util-linux
+
+      # GitHub runners are virtualised: swapon is rejected by the hypervisor, so
+      # there is no swap to add. The build is limited with MAKEFLAGS instead.
+      - name: limit compiler parallelism
+        run: echo "MAKEFLAGS=-j2" >> "$GITHUB_ENV"
 
       - name: caches
         uses: actions/cache@v4
         with:
           path: |
-            lfs/sources
-            lfs/var/lib/wld/sources
-          key: sources-${{ hashFiles('build/*.sh', 'ports.spec') }}
+            /mnt/lfs/sources
+            /mnt/lfs/var/lib/wld/sources
+          key: sources-${{ hashFiles('build/*.sh', 'sources*.txt') }}
           restore-keys: sources-
+
+      - name: prepare the host (lfs user, layout, verified sources)
+        run: sudo ./build/00-bootstrap-host.sh
 
       - name: build the base system (LFS 12.4)
         run: ./build/all.sh
@@ -55,6 +86,9 @@ jobs:
           rustup target add x86_64-unknown-linux-musl
           cargo test
           cargo build --release --target x86_64-unknown-linux-musl
+          sudo mkdir -p /mnt/lfs/usr/local/bin
+          sudo install -m755 target/x86_64-unknown-linux-musl/release/wld \
+            /mnt/lfs/usr/local/bin/wld
 
       - name: build the initramfs
         run: |
@@ -62,7 +96,11 @@ jobs:
           ./scripts/make-initramfs.sh
 
       - name: build the disk image
-        run: ./scripts/make-disk-image.sh /mnt/wylde/wylde.img
+        run: sudo ./scripts/make-disk-image.sh /mnt/wylde/wylde.img
+
+      - name: boot it
+        # a boot that reaches the login prompt is the real unit of trust
+        run: sudo ./scripts/boot-test.sh /mnt/wylde/wylde.img
 
       - name: measure boot time and idle memory
         run: |
@@ -73,6 +111,8 @@ jobs:
           cat benchmark.json
 
       - name: enforce the lean budget
+        # boot seconds are only compared against the baseline when both runs
+        # used the same accelerator (KVM vs TCG are not comparable)
         run: python3 tools/check-regression.py benchmark.json benchmarks/baseline.json
 
       - name: publish the disk image
@@ -83,22 +123,28 @@ jobs:
             /mnt/wylde/wylde.img
             benchmark.json
 
-  ports:
-    name: verify every port still builds
-    runs-on: ubuntu-latest
+  installer:
+    name: installer and doctor
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - name: host toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            gcc g++ make bison flex m4 texinfo patch perl \
-            python3 xz-utils bzip2 wget curl git
-      - name: check the port tree is consistent with the spec
+          sudo apt-get install -y gcc musl-tools musl-dev curl rsync shellcheck
+
+      - name: installer is valid and refuses to run unattended
+        # 16-installer.sh also proves the installer stops without a human at the
+        # keyboard rather than guessing which disk to erase
+        run: ./build/16-installer.sh
+
+      - name: wylde-doctor builds static and passes its tests
+        run: ./build/17-doctor.sh
+
+      - name: doctor runs on this machine and reports
+        # it must work on a non-Wylde host too: no /proc surprises, no crash
         run: |
-          python3 tools/gen-ports.py ports.spec --check
-      - name: every Pkgfile parses
-        working-directory: wld
-        run: |
-          cargo build --release
-          WLD_ROOT=$PWD/testroot ./target/release/wld ports | wc -l
+          ./target/wylde-doctor | head -20
+          ./target/wylde-doctor memory
+          ./target/wylde-doctor services

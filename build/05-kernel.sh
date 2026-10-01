@@ -38,9 +38,23 @@ make x86_64_defconfig
   --set-val SYSTEM_REVOCATION_KEYS "" \
   --disable GCC_PLUGINS \
   --disable GDB_SCRIPTS \
-  --disable DRM \
-  --disable SOUND \
-  --disable MEDIA_SUPPORT \
+  --enable  DRM \
+  --enable  DRM_KMS \
+  --enable  FB \
+  --enable  FBDEV \
+  --enable  DRM_VIRTIO \
+  --enable  DRM_BOCHS \
+  --enable  DRM_AMDGPU \
+  --enable  DRM_I915 \
+  --enable  DRM_RADEON \
+  --enable  SOUND \
+  --enable  SND \
+  --enable  SND_PCM \
+  --enable  SND_HDA_INTEL \
+  --enable  SND_HDA_INTEL_HDMI \
+  --enable  SND_HDA_CODEC \
+  --enable  SND_USB_AUDIO \
+  --enable  USB_AUDIO \
   --disable WLAN \
   --disable BT \
   --enable  NETFILTER \

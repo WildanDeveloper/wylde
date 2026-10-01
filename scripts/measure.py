@@ -6,7 +6,7 @@ Writes JSON with:
   ram_total_kib MemTotal
   ram_idle_kib  MemTotal - MemAvailable
 
-Usage: measure.py <port> <output.json>
+Usage: measure.py <port> <output.json> [accel]
 """
 import json
 import re
@@ -21,6 +21,7 @@ STEP_DEADLINE = 240
 def main() -> int:
     port = int(sys.argv[1])
     out_path = sys.argv[2]
+    accel = sys.argv[3] if len(sys.argv) > 3 else "unknown"
 
     sock = socket.create_connection(("127.0.0.1", port), timeout=10)
     sock.settimeout(1.0)
@@ -81,6 +82,7 @@ def main() -> int:
         available = int(match.group(1))
 
     result = {
+        "accel": accel,
         "boot_seconds": round(uptime, 2) if uptime is not None else None,
         "ram_total_kib": total,
         "ram_idle_kib": (total - available) if total and available else None,

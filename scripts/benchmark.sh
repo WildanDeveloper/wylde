@@ -18,6 +18,14 @@ INITRD=${INITRD:-/root/distro/build/initramfs.cpio.gz}
 pkill -f "qemu-system-x86_64" 2>/dev/null || true
 sleep 1
 
+# KVM and TCG are not comparable: the same guest boots an order of magnitude
+# faster with hardware virtualisation, so the measurement records which one ran
+ACCEL=tcg
+if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
+    ACCEL=kvm
+fi
+echo "benchmark: accelerator $ACCEL"
+
 ROOT_UUID=$(blkid -o value -s UUID "$IMG" 2>/dev/null || true)
 if [ -z "$ROOT_UUID" ]; then
     LOOP=$(losetup -f --show -P "$IMG")
@@ -26,7 +34,7 @@ if [ -z "$ROOT_UUID" ]; then
 fi
 
 qemu-system-x86_64 \
-    -m 2048 -smp 2 -accel tcg,thread=multi -snapshot \
+    -m 2048 -smp 2 -accel "$ACCEL" -snapshot \
     -kernel "$KERNEL" \
     -initrd "$INITRD" \
     -append "root=UUID=$ROOT_UUID ro console=ttyS0,115200n8 init=/init panic=10" \
@@ -37,7 +45,7 @@ qemu-system-x86_64 \
 
 sleep 3
 set +e
-python3 "$(dirname "$0")/measure.py" "$PORT" "$OUT"
+python3 "$(dirname "$0")/measure.py" "$PORT" "$OUT" "$ACCEL"
 STATUS=$?
 set -e
 
