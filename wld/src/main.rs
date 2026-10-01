@@ -28,6 +28,8 @@ COMMANDS:
     ports             List available ports
     tree              Show the port tree
     doctor            Report on the local wld installation
+    sync              Fetch the package repository index
+    upgrade <name>    Upgrade a package to the repository version
 
 ENVIRONMENT:
     WLD_ROOT          database root (default /var/lib/wld)
@@ -54,6 +56,8 @@ fn main() -> ExitCode {
         "install" | "add" => cmd_build(&db, args.get(1), true),
         "remove" | "rm" | "uninstall" => cmd_remove(&db, args.get(1)),
         "doctor" => cmd_doctor(&db),
+        "sync" => cmd_sync(&db),
+        "upgrade" => cmd_upgrade(&db, args.get(1)),
         other => Err(format!("unknown command '{}'\n\n{}", other, USAGE)),
     };
 
@@ -222,6 +226,64 @@ fn cmd_doctor(db: &db::Database) -> Result<(), String> {
             .any(|p| std::path::Path::new(p).join(bin).exists());
         println!("  tool {:<10} {}", bin, if found { "ok" } else { "missing" });
     }
+    Ok(())
+}
+
+/// Repository base URL: WLD_REPO, or the file in the wld root, or the default.
+fn repo_url(db: &db::Database) -> String {
+    if let Ok(url) = env::var("WLD_REPO") {
+        return url;
+    }
+    let file = db.root().join("repository");
+    if let Ok(text) = std::fs::read_to_string(&file) {
+        if let Some(url) = text.lines().find_map(|l| l.strip_prefix("url=")) {
+            return url.trim().to_string();
+        }
+    }
+    "https://wylde.github.io/wylde-repo".to_string()
+}
+
+fn cmd_sync(db: &db::Database) -> Result<(), String> {
+    let url = repo_url(db);
+    println!("repository: {}", url);
+    let cache = db.root().join("repo");
+    let entries = ports::fetch_index(&url, &cache)?;
+    let installed = db.installed().map_err(|e| e.to_string())?;
+    println!("{} packages in the repository\n", entries.len());
+    println!("{:<22} {:<14} {}", "NAME", "VERSION", "STATE");
+    for entry in &entries {
+        let state = match installed.iter().find(|p| p.name == entry.name) {
+            Some(current) if current.version == entry.version => "up to date",
+            Some(_) => "update available",
+            None => "not installed",
+        };
+        println!("{:<22} {:<14} {}", entry.name, entry.version, state);
+    }
+    Ok(())
+}
+
+fn cmd_upgrade(db: &db::Database, name: Option<&String>) -> Result<(), String> {
+    let name = need(name, "upgrade")?;
+    let url = repo_url(db);
+    let cache = db.root().join("repo");
+    let entries = ports::fetch_index(&url, &cache)?;
+    let entry = entries
+        .iter()
+        .find(|e| e.name == *name)
+        .ok_or_else(|| format!("{} is not in the repository", name))?;
+
+    match db.find(name).map_err(|e| e.to_string())? {
+        Some(current) if current.version == entry.version => {
+            println!("{} {} is already current", name, entry.version);
+            return Ok(());
+        }
+        Some(current) => println!("upgrading {} {} -> {}", name, current.version, entry.version),
+        None => println!("installing {} {}", name, entry.version),
+    }
+
+    let archive = ports::fetch_package(&url, entry, &db.build_dir())?;
+    println!("==> archive: {}", archive.display());
+    println!("==> unpack into / and refresh the database with 'wld install <port>' when sources change");
     Ok(())
 }
 

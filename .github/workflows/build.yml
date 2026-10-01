@@ -1,0 +1,104 @@
+name: build and benchmark
+
+# Wylde's first principle: "lean is a feature, not a trade-off. A release that
+# regresses is rejected." So CI does not only build — it boots what it built and
+# refuses to pass if the system got slower or fatter.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: build the system and measure it
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: host toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            binutils bison flex gawk m4 texinfo wget curl git \
+            gcc g++ make xz-utils bzip2 \
+            qemu-system-x86 musl-tools musl-dev cpio \
+            rsync e2fsprogs
+
+      - name: swap for the heavy compiler steps
+        run: |
+          # gcc's insn-automata step needs more memory than a 7 GB runner has
+          sudo fallocate -l 6G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+
+      - name: caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            lfs/sources
+            lfs/var/lib/wld/sources
+          key: sources-${{ hashFiles('build/*.sh', 'ports.spec') }}
+          restore-keys: sources-
+
+      - name: build the base system (LFS 12.4)
+        run: ./build/all.sh
+        env:
+          LFS: /mnt/lfs
+          LOGDIR: /tmp/wylde-build
+
+      - name: build wld
+        working-directory: wld
+        run: |
+          rustup target add x86_64-unknown-linux-musl
+          cargo test
+          cargo build --release --target x86_64-unknown-linux-musl
+
+      - name: build the initramfs
+        run: |
+          sudo apt-get install -y busybox-static
+          ./scripts/make-initramfs.sh
+
+      - name: build the disk image
+        run: ./scripts/make-disk-image.sh /mnt/wylde/wylde.img
+
+      - name: measure boot time and idle memory
+        run: |
+          sudo ./scripts/benchmark.sh \
+            /mnt/wylde/wylde.img \
+            /mnt/lfs/boot/vmlinuz-6.16.1-lfs-12.4 \
+            benchmark.json
+          cat benchmark.json
+
+      - name: enforce the lean budget
+        run: python3 tools/check-regression.py benchmark.json benchmarks/baseline.json
+
+      - name: publish the disk image
+        uses: actions/upload-artifact@v4
+        with:
+          name: wylde-image
+          path: |
+            /mnt/wylde/wylde.img
+            benchmark.json
+
+  ports:
+    name: verify every port still builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: host toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc g++ make bison flex m4 texinfo patch perl \
+            python3 xz-utils bzip2 wget curl git
+      - name: check the port tree is consistent with the spec
+        run: |
+          python3 tools/gen-ports.py ports.spec --check
+      - name: every Pkgfile parses
+        working-directory: wld
+        run: |
+          cargo build --release
+          WLD_ROOT=$PWD/testroot ./target/release/wld ports | wc -l

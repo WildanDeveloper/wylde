@@ -1,0 +1,12 @@
+site_name: Wylde
+site_description: A Linux distribution built from scratch. Complete, but lean.
+docs_dir: docs
+theme:
+  name: readthedocs
+nav:
+  - Install: install.md
+  - Writing a port: ports-tutorial.md
+  - Contributing: contributing.md
+markdown_extensions:
+  - admonition
+  - codehilite

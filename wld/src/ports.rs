@@ -303,6 +303,78 @@ pub struct Build {
     pub files: Vec<PathBuf>,
 }
 
+/// One entry of a repository index: `index.tsv` is `name<TAB>version<TAB>size<TAB>sha256`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RepoEntry {
+    pub name: String,
+    pub version: String,
+    pub size: u64,
+    pub sha256: String,
+}
+
+impl RepoEntry {
+    /// Parse one index line. Returns None for comments and blank lines.
+    pub fn parse(line: &str) -> Option<Self> {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            return None;
+        }
+        let mut fields = line.split('\t');
+        let name = fields.next()?.trim().to_string();
+        let version = fields.next()?.trim().to_string();
+        let size: u64 = fields.next()?.trim().parse().ok()?;
+        let sha256 = fields.next()?.trim().to_string();
+        Some(RepoEntry { name, version, size, sha256 })
+    }
+
+    pub fn line(&self) -> String {
+        format!("{}\t{}\t{}\t{}", self.name, self.version, self.size, self.sha256)
+    }
+}
+
+/// Download a repository index and return its entries.
+pub fn fetch_index(base_url: &str, cache: &Path) -> Result<Vec<RepoEntry>, String> {
+    let index_url = format!("{}/index.tsv", base_url.trim_end_matches('/'));
+    let local = cache.join("index.tsv");
+    if !local.exists() {
+        println!("==> fetching repository index {}", index_url);
+        if let Some(parent) = local.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        fetch(&index_url, &local)?;
+    }
+    let text = std::fs::read_to_string(&local)
+        .map_err(|e| format!("cannot read {}: {}", local.display(), e))?;
+    Ok(text.lines().filter_map(RepoEntry::parse).collect())
+}
+
+/// Download a package archive from the repository into the sources cache.
+pub fn fetch_package(base_url: &str, entry: &RepoEntry, cache: &Path) -> Result<PathBuf, String> {
+    let file = cache.join(format!("{}-{}.tar.gz", entry.name, entry.version));
+    if file.exists() {
+        return Ok(file);
+    }
+    let url = format!(
+        "{}/packages/{}-{}.tar.gz",
+        base_url.trim_end_matches('/'),
+        entry.name,
+        entry.version
+    );
+    println!("==> downloading {}", url);
+    fetch(&url, &file)?;
+    let actual = crate::db::sha256_of(&file);
+    if actual != entry.sha256 {
+        let _ = std::fs::remove_file(&file);
+        return Err(format!(
+            "checksum mismatch for {}: expected {}, got {}",
+            file.display(),
+            entry.sha256,
+            actual
+        ));
+    }
+    Ok(file)
+}
+
 /// Where a source is cached: package name plus the last URL path component, so
 /// two ports can never clobber each other's tarball.
 fn cache_name(pkgfile: &Pkgfile, url: &str) -> String {
