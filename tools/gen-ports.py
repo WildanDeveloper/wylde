@@ -147,6 +147,8 @@ def render(record: dict) -> str:
     ]
     if "depends" in record:
         lines.append(f"depends={record['depends']}")
+    if "srcdir" in record:
+        lines.append(f"srcdir={record['srcdir']}")
     lines.append("")
     lines.append("build() {")
     body = record.get("build", "").rstrip()

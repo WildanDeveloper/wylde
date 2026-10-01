@@ -2,8 +2,8 @@ name=iproute2
 version=6.16.0
 description="Interface configuration and monitoring tools: ip, tc, ss"
 license=GPL-2.0-or-later
-source=https://mirrors.edge.kernel.org/pub/linux/utils/iproute2/iproute2-$version.tar.xz
-checksum(https://mirrors.edge.kernel.org/pub/linux/utils/iproute2/iproute2-$version.tar.xz)=5900ccc15f9ac3bf7b7eae81deb5937123df35e99347a7f11a22818482f0a8d0
+source=https://www.kernel.org/pub/linux/utils/net/iproute2/iproute2-$version.tar.xz
+checksum(https://www.kernel.org/pub/linux/utils/net/iproute2/iproute2-$version.tar.xz)=5900ccc15f9ac3bf7b7eae81deb5937123df35e99347a7f11a22818482f0a8d0
 depends="bison flex"
 
 build() {

@@ -2,8 +2,8 @@ name=libelf
 version=0.193
 description="libelf: reading ELF files, needed by the kernel's objtool"
 license=GPL-3.0-or-later
-source=https://sourceware.org/elfutils/elfutils-$version.tar.bz2
-checksum(https://sourceware.org/elfutils/elfutils-$version.tar.bz2)=7857f44b624f4d8d421df851aaae7b1402cfe6bcdd2d8049f15fc07d3dde7635
+source=https://sourceware.org/ftp/elfutils/$version/elfutils-$version.tar.bz2
+checksum(https://sourceware.org/ftp/elfutils/$version/elfutils-$version.tar.bz2)=7857f44b624f4d8d421df851aaae7b1402cfe6bcdd2d8049f15fc07d3dde7635
 depends="zlib zstd"
 
 build() {

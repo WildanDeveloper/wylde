@@ -7,7 +7,8 @@ checksum(https://ftp.gnu.org/gnu/gettext/gettext-$version.tar.xz)=d1fb86e260cfe7
 depends="ncurses"
 
 build() {
-    ./configure --disable-shared
+    ./configure --prefix=/usr --disable-shared --disable-java --disable-csharp --disable-nls
      make
-     cp -v gettext-tools/src/msgfmt gettext-tools/src/msgmerge gettext-tools/src/xgettext /usr/bin
+     make DESTDIR="$PKG" install
+     find "$PKG" -name '*.la' -delete
 }

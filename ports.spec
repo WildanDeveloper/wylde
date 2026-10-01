@@ -6,9 +6,14 @@
 # ---------------------------------------------------------------- ch.7 tools
 
 category=core name=gettext version=0.26 source=https://ftp.gnu.org/gnu/gettext/gettext-$version.tar.xz license=GPL-3.0-or-later description="GNU internationalization utilities and runtime" depends="ncurses"
-build=./configure --disable-shared
+# Stage everything through $PKG. Copying binaries straight into /usr/bin would
+# install files the package database cannot track, so `wld remove` would leave
+# them behind. autopoint is the reason this port exists: it generates the
+# gettext files autogen.sh wants.
+build=./configure --prefix=/usr --disable-shared --disable-java --disable-csharp --disable-nls
      make
-     cp -v gettext-tools/src/msgfmt gettext-tools/src/msgmerge gettext-tools/src/xgettext /usr/bin
+     make DESTDIR="$PKG" install
+     find "$PKG" -name '*.la' -delete
 
 category=core name=bison version=3.8.2 source=https://ftp.gnu.org/gnu/bison/bison-$version.tar.xz license=GPL-3.0-or-later description="GNU parser generator"
 build=./configure --prefix=/usr --docdir=/usr/share/doc/bison-3.8.2
@@ -44,7 +49,7 @@ build=./configure --prefix=/usr
      make
      make DESTDIR="$PKG" install
 
-category=core name=util-linux version=2.41.1 source=https://mirrors.edge.kernel.org/pub/linux/utils/util-linux/v$version/util-linux-$version.tar.xz license=GPL-2.0-or-later LGPL-2.1-or-later BSD-3-Clause MIT description="Standard system utilities" depends="ncurses"
+category=core name=util-linux version=2.41.1 source=https://www.kernel.org/pub/linux/utils/util-linux/v2.41/util-linux-$version.tar.xz license=GPL-2.0-or-later LGPL-2.1-or-later BSD-3-Clause MIT description="Standard system utilities" depends="ncurses"
 build=mkdir -pv "$PKG/var/lib/hwclock"
      ./configure --libdir=/usr/lib     \
                  --runstatedir=/run    \
@@ -151,7 +156,7 @@ build=./configure --prefix=/usr                 \
      make
      cp -av --remove-destination .libs/libcrypt.so.1* "$PKG/usr/lib"
 
-category=build name=libelf version=0.193 source=https://sourceware.org/elfutils/elfutils-$version.tar.bz2 license=GPL-3.0-or-later LGPL-2.1-or-later description="libelf: reading ELF files, needed by the kernel's objtool" depends="zlib zstd"
+category=build name=libelf version=0.193 source=https://sourceware.org/ftp/elfutils/$version/elfutils-$version.tar.bz2 license=GPL-3.0-or-later LGPL-2.1-or-later description="libelf: reading ELF files, needed by the kernel's objtool" depends="zlib zstd"
 build=./configure --prefix=/usr        \
                  --disable-debuginfod \
                  --enable-libdebuginfod=dummy
@@ -173,7 +178,7 @@ build=./configure --prefix=/usr            \
      make DESTDIR="$PKG" install
      ln -sv flex "$PKG/usr/bin/lex"
 
-category=build name=autoconf version=2.72 source=https://ftp.gnu.org/gnu/autoconf/autoconf-$version.tar.xz license=GPL-3.0-or-later description="Generate configure scripts" depends="m4 perl"
+category=build name=autoconf version=2.72 source=https://ftp.gnu.org/gnu/autoconf/autoconf-$version.tar.xz license=GPL-3.0-or-later description="Generate configure scripts" depends="perl"
 build=./configure --prefix=/usr
      make
      make DESTDIR="$PKG" install
@@ -200,16 +205,19 @@ build=./config --prefix=/usr         \
      make MANSUFFIX=ssl DESTDIR="$PKG" install
      find "$PKG" -name '*.so*' -exec strip --strip-unneeded {} + 2>/dev/null || true
 
-category=apps name=procps version=4.0.5 source=https://sourceforge.net/projects/procps-ng/files/Production/procps-ng-$version/procps-ng-$version.tar.xz license=GPL-2.0-or-later description="Process utilities: ps, free, pgrep, sysctl" depends="ncurses"
-build=./configure --prefix=/usr                    \
-                 --docdir=/usr/share/doc/procps-ng-4.0.5 \
+category=apps name=procps version=4.0.5 source=https://gitlab.com/procps-ng/procps/-/archive/v$version/procps-v$version.tar.gz license=GPL-2.0-or-later description="Process utilities: ps, free, pgrep, sysctl" depends="ncurses autoconf automake gettext" srcdir=procps-v$version
+# The release tarball lives on SourceForge, which serves browsers only and
+# cannot be fetched by a build system. The git snapshot is scriptable, so the
+# configure script is generated here with autotools instead.
+build=./autogen.sh
+     ./configure --prefix=/usr                    \
                  --disable-static                 \
                  --disable-kill                   \
                  --enable-watch8bit
      make
      make DESTDIR="$PKG" install
 
-category=apps name=iproute2 version=6.16.0 source=https://mirrors.edge.kernel.org/pub/linux/utils/iproute2/iproute2-$version.tar.xz license=GPL-2.0-or-later description="Interface configuration and monitoring tools: ip, tc, ss" depends="bison flex"
+category=apps name=iproute2 version=6.16.0 source=https://www.kernel.org/pub/linux/utils/net/iproute2/iproute2-$version.tar.xz license=GPL-2.0-or-later description="Interface configuration and monitoring tools: ip, tc, ss" depends="bison flex"
 build=sed -i /ARPD/d Makefile
      rm -fv man/man8/arpd.8
      make NETNS_RUN_DIR=/run
@@ -251,7 +259,7 @@ build=sed -i 's/groups$(EXEEXT) //' src/Makefile.in
      # pwconv/grpconv would rewrite the live /etc files; the port does not
      cp -v "$PKG/etc/login.defs" /dev/null 2>/dev/null || true
 
-category=core name=sysklogd version=2.7.2 source=https://github.com/torsten-ochsenknecht/sysklogd/archive/refs/tags/sysklogd-$version.tar.gz license=BSD-3-Clause description="System logger that reads kernel messages"
+category=core name=sysklogd version=2.7.2 source=https://github.com/troglobit/sysklogd/releases/download/v$version/sysklogd-$version.tar.gz license=BSD-3-Clause description="System logger that reads kernel messages"
 build=./configure --prefix=/usr      \
                  --sysconfdir=/etc  \
                  --runstatedir=/run \
@@ -266,3 +274,17 @@ build=./configure --prefix=/usr --sysconfdir=/etc --runstatedir=/run --dbdir=/va
      make -j4
      make DESTDIR="$PKG" install
      mkdir -p "$PKG/var/lib/dhcpcd"
+
+# Phase 4 needs autotools: some upstream projects (procps-ng among them) only
+# publish git snapshots, so `configure` has to be generated here rather than
+# downloaded. SourceForge serves browsers only, which is why the snapshot comes
+# from the project's own GitLab. m4 and perl come from the base system.
+category=build name=autoconf version=2.72 source=https://ftp.gnu.org/gnu/autoconf/autoconf-$version.tar.xz license=GPL-3.0-or-later description="Generates configure scripts from configure.ac" depends="perl"
+build=./configure --prefix=/usr
+     make
+     make DESTDIR="$PKG" install
+
+category=build name=automake version=1.17 source=https://ftp.gnu.org/gnu/automake/automake-$version.tar.xz license=GPL-3.0-or-later description="Generates Makefile.in files for projects using autotools" depends="autoconf perl"
+build=./configure --prefix=/usr
+     make
+     make DESTDIR="$PKG" install

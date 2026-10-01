@@ -3,7 +3,7 @@ version=1.47.3
 description="Ext2/3/4 filesystem utilities: mkfs.ext4, fsck"
 license=GPL-2.0-or-later
 source=https://mirrors.edge.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v$version/e2fsprogs-$version.tar.gz
-checksum(https://mirrors.edge.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v$version/e2fsprogs-$version.tar.gz)=2f5164e64dd7d91eadd1e0e8a77d92c06dd7837bb19f1d9189ce1939b363d2b4
+checksum(https://mirrors.edge.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v$version/e2fsprogs-$version.tar.gz)=7d4612f4e4f7ca6c2f669679028bcb02763e3b6280c9c19b2cf168eaf65e88af
 depends="libcap openssl util-linux"
 
 build() {
