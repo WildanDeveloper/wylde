@@ -98,9 +98,9 @@ make -j$(nproc) bzImage modules
 make modules_install
 
 mkdir -p /boot
-cp -iv arch/x86/boot/bzImage /boot/vmlinuz-\$KV-lfs-12.4
-cp -iv System.map /boot/System.map-\$KV
-cp -iv .config /boot/config-\$KV
+install -m 644 arch/x86/boot/bzImage /boot/vmlinuz-$KV-lfs-12.4
+install -m 644 System.map /boot/System.map-$KV
+install -m 644 .config /boot/config-$KV
 cp -r Documentation -T /usr/share/doc/linux-\$KV
 
 install -v -m755 -d /etc/modprobe.d

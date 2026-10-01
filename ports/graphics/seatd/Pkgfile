@@ -1,0 +1,13 @@
+name=seatd
+version=0.9.3
+description="Session and seat management, which a Wayland compositor needs to hand out input and output access"
+license=MIT
+source=https://git.sr.ht/~kennylevinsen/seatd/archive/$version.tar.gz
+checksum(https://git.sr.ht/~kennylevinsen/seatd/archive/$version.tar.gz)=302564d54d8e28191fadfd734f2675ecb0c9e0615a58011b89ef15dfa4dbaa96
+depends="meson ninja"
+
+build() {
+    meson setup build --prefix=/usr --buildtype=plain -Ddefault_library=static -Ddocs=disabled
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+}

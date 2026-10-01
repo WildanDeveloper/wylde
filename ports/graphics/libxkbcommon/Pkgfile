@@ -1,0 +1,13 @@
+name=libxkbcommon
+version=1.11.0
+description="Keyboard layout handling for Wayland"
+license=MIT
+source=https://gitlab.freedesktop.org/xkbcommon/libxkbcommon/-/archive/$version/libxkbcommon-$version.tar.gz
+checksum(https://gitlab.freedesktop.org/xkbcommon/libxkbcommon/-/archive/$version/libxkbcommon-$version.tar.gz)=d31ee2201ff9054df110f9391f0dc7bf9d4a4f099ae3f94aeeadacb686d3caf0
+depends="xkeyboard-config xorgproto meson ninja"
+
+build() {
+    meson setup build --prefix=/usr --buildtype=plain -Denable-x11=false -Denable-wayland=false -Denable-docs=false -Denable-xkcbtest=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+}

@@ -1,0 +1,13 @@
+name=pixman
+version=0.46.2
+description="Pixel manipulation library; also the renderer's last resort without a GPU"
+license=MIT
+source=https://www.cairographics.org/releases/pixman-$version.tar.gz
+checksum(https://www.cairographics.org/releases/pixman-$version.tar.gz)=3e0de5ba6e356916946a3d958192f15505dcab85134771bfeab4ce4e29bbd733
+depends="meson ninja"
+
+build() {
+    meson setup build --prefix=/usr --buildtype=plain -Dgtk=disabled -Dlibpng=disabled -Dtests=disabled -Ddemos=disabled
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+}

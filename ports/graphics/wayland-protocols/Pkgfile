@@ -1,0 +1,13 @@
+name=wayland-protocols
+version=1.49
+description="Interface definitions every Wayland component shares"
+license=MIT
+source=https://gitlab.freedesktop.org/wayland/wayland-protocols/-/archive/$version/wayland-protocols-$version.tar.gz
+checksum(https://gitlab.freedesktop.org/wayland/wayland-protocols/-/archive/$version/wayland-protocols-$version.tar.gz)=8d94eee148db4d8111ccc0d4331de2f82d4b28c38e30eace9f052886480f7d86
+depends="meson ninja"
+
+build() {
+    meson setup build --prefix=/usr --buildtype=plain -Dtests=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+}

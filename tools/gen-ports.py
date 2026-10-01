@@ -38,6 +38,31 @@ def find_source(tarball: str) -> Path | None:
     return None
 
 
+# What a real archive starts with. A mirror that answers with an error page, a
+# captcha or a rate-limit notice still returns HTTP 200, and recording that
+# page's checksum would pin garbage into the tree for ever.
+MAGIC = (
+    b"\x1f\x8b",              # gzip
+    b"\xfd7zXZ\x00",      # xz
+    b"BZh",                    # bzip2
+    b"PK\x03\x04",      # zip
+    b"\x28\xb5\x2f\xfd",# zstd
+)
+
+
+def looks_like_an_archive(path: Path) -> bool:
+    try:
+        with open(path, "rb") as handle:
+            head = handle.read(512)
+    except OSError:
+        return False
+    if head.startswith(MAGIC):
+        return True
+    if len(head) > 262 and head[257:262] == b"ustar":
+        return True
+    return False
+
+
 def download(url: str, name: str, into: Path | None = None) -> Path:
     """Fetch a source tarball so its real checksum can be recorded."""
     target = (into or SOURCES_CANDIDATES[-1]) / name
@@ -48,6 +73,10 @@ def download(url: str, name: str, into: Path | None = None) -> Path:
         check=False,
     )
     if result.returncode != 0 or not target.exists() or target.stat().st_size == 0:
+        target.unlink(missing_ok=True)
+        return None
+    if not looks_like_an_archive(target):
+        print(f"  {url} did not return an archive ({target.read_bytes()[:60]!r})")
         target.unlink(missing_ok=True)
         return None
     return target

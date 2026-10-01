@@ -1,0 +1,14 @@
+name=expat
+version=2.7.1
+description="XML parser used by the graphics stack"
+license=MIT
+source=https://github.com/libexpat/libexpat/releases/download/R_2_7_1/expat-$version.tar.xz
+checksum(https://github.com/libexpat/libexpat/releases/download/R_2_7_1/expat-$version.tar.xz)=354552544b8f99012e5062f7d570ec77f14b412a3ff5c7d8d0dae62c0d217c30
+depends=""
+
+build() {
+    ./configure --prefix=/usr --disable-static --with-sysroot=/usr
+     make
+     make DESTDIR="$PKG" install
+     find "$PKG" -name '*.la' -delete
+}

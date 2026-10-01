@@ -43,6 +43,33 @@ def pinned_names(*lists: Path) -> set[str]:
     return names
 
 
+def destructive_dirglobs(scripts: list[Path]) -> list[str]:
+    """Find `rm -rf <glob>` patterns that would delete the tarball as well.
+
+    `rm -rf bash-*` looks harmless in a source directory until you notice it
+    also matches bash-5.3.tar.gz — and then the stage fails on a clean machine
+    with "Cannot open: No such file or directory", an hour into the build.
+    """
+    import fnmatch
+
+    problems = []
+    remove = re.compile(r"rm\s+-[a-zA-Z]*r[a-zA-Z]*f?\s+['\"]?([\w.*?-]+)")
+    for script in scripts:
+        # comments explain these patterns; they do not run them
+        text = "\n".join(
+            line for line in script.read_text().splitlines()
+            if not line.lstrip().startswith("#")
+        )
+        archives = set(ARCHIVE.findall(text))
+        for pattern in remove.findall(text):
+            if "*" not in pattern and "?" not in pattern:
+                continue
+            for archive in archives:
+                if fnmatch.fnmatch(archive, pattern):
+                    problems.append(f"{script}: rm -rf {pattern} also matches {archive}")
+    return problems
+
+
 def main() -> int:
     args = sys.argv[1:]
     wget_list = Path(args[0]) if args else Path("sources/wget-list")
@@ -91,6 +118,9 @@ def main() -> int:
         f"build sources: {checked} archive references checked against "
         f"{wget_list} and {extra}"
     )
+
+    for problem in destructive_dirglobs(scripts):
+        problems.append((problem.split(":")[0], problem.split(": ", 1)[1], "destructive glob"))
     if problems:
         print()
         for script, reference, why in problems:

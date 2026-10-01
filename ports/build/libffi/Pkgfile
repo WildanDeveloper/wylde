@@ -1,0 +1,14 @@
+name=libffi
+version=3.5.2
+description="Portable foreign function interface, needed by the Wayland scanner"
+license=MIT
+source=https://github.com/libffi/libffi/releases/download/v$version/libffi-$version.tar.gz
+checksum(https://github.com/libffi/libffi/releases/download/v$version/libffi-$version.tar.gz)=f3a3082a23b37c293a4fcd1053147b371f2ff91fa7ea1b2a52e335676bac82dc
+depends=""
+
+build() {
+    ./configure --prefix=/usr --disable-static --disable-multi-os-directory
+     make
+     make DESTDIR="$PKG" install
+     find "$PKG" -name '*.la' -delete
+}

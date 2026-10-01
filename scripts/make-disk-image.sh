@@ -6,11 +6,18 @@ LFS=/mnt/lfs
 IMG=${1:-/mnt/wylde/wylde.img}
 MNT=/mnt/wyldemnt
 KV=6.16.1
+# A desktop system needs room: the sources alone are 2 GB, and phase 4 adds
+# mesa, llvm and a compiler. Sized generously, and sparse, so an unused image
+# costs nothing on disk.
+IMG_SIZE=${IMG_SIZE:-16G}
 
 mkdir -p /mnt/wylde
 if [ ! -f "$IMG" ]; then
-  echo "creating $IMG (6 GiB sparse)"
-  truncate -s 6G "$IMG"
+  echo "creating $IMG ($IMG_SIZE sparse)"
+  truncate -s "$IMG_SIZE" "$IMG"
+elif [ "$(stat -c%s "$IMG")" -lt "$(numfmt --from=iec "$IMG_SIZE")" ]; then
+  echo "growing $IMG to $IMG_SIZE"
+  truncate -s "$IMG_SIZE" "$IMG"
 fi
 
 LOOP=$(losetup -f --show -P "$IMG")
@@ -25,7 +32,8 @@ label: dos
 unit: sectors
 
 start=2048, size=204800, type=83, bootable
-start=206848, size=12000000, type=83
+# root takes everything that is left
+start=206848, type=83
 EOF
   partprobe "$LOOP" || true
   sleep 2

@@ -166,13 +166,16 @@ simple_stage() {  # simple_stage <name> <tarball> <dirglob> <configure-flags...>
   cat > /tmp/wylde-ch5-$name.sh <<STAGE
 set -e
 cd \$LFS/sources
-rm -rf $dirglob
+# remove the previous unpacked tree, never the tarball: "rm -rf bash-*" also
+# matches bash-5.3.tar.gz, and the archive is the one thing that cannot be
+# fetched again for free
+find . -maxdepth 1 -type d -name "$dirglob" -exec rm -rf {} +
 tar -xf $tarball
 cd $dirglob
 $*
 STAGE
   stage "$name" /tmp/wylde-ch5-$name.sh
-  rm -rf "$LFS/sources"/$dirglob
+  ( cd "$LFS/sources" && find . -maxdepth 1 -type d -name "$dirglob" -exec rm -rf {} + )
 }
 
 simple_stage m4 m4-1.4.20.tar.xz 'm4-1.4.20' './configure --prefix=/usr \

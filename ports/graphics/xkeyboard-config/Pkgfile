@@ -1,0 +1,12 @@
+name=xkeyboard-config
+version=2.45
+description="Keyboard layouts and keymaps for X and Wayland"
+license="MIT GPL-2.0-or-later OFL-1.1"
+source=https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config/-/archive/$version/xkeyboard-config-$version.tar.xz
+checksum(https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config/-/archive/$version/xkeyboard-config-$version.tar.xz)=ed1054901036285a19c7a61ae789e48e0e9b7ef627ea866fa329ce543db2d9db
+
+build() {
+    ./configure --prefix=/usr --with-xkb-config-root=/usr/share/X11/xkb --disable-docs
+     make
+     make DESTDIR="$PKG" install
+}

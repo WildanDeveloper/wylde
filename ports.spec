@@ -288,3 +288,91 @@ category=build name=automake version=1.17 source=https://ftp.gnu.org/gnu/automak
 build=./configure --prefix=/usr
      make
      make DESTDIR="$PKG" install
+
+# ============================================================================
+# Phase 4 — Wayland desktop
+#
+# Ordered so each package can be built on the ones above it. Mesa is not here
+# yet: wlroots can render with pixman alone, which is enough for a session that
+# has no GPU at all. Mesa and LLVM come after the compositor works.
+# ============================================================================
+
+category=graphics name=wayland-protocols version=1.49 source=https://gitlab.freedesktop.org/wayland/wayland-protocols/-/archive/$version/wayland-protocols-$version.tar.gz license=MIT description="Interface definitions every Wayland component shares" depends="meson ninja"
+build=meson setup build --prefix=/usr --buildtype=plain -Dtests=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+
+category=graphics name=libdrm version=2.4.134 source=https://gitlab.freedesktop.org/mesa/libdrm/-/archive/libdrm-$version/libdrm-libdrm-$version.tar.gz license=MIT description="Kernel modesetting interface: the display drivers' userspace library" depends="meson ninja"
+build=meson setup build --prefix=/usr --buildtype=plain -Dtests=false -Dman-pages=disabled -Dinstall-test-programs=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+
+category=graphics name=wayland version=1.26.0 source=https://gitlab.freedesktop.org/wayland/wayland/-/archive/$version/wayland-$version.tar.gz license=MIT description="The Wayland compositor and client library" depends="libdrm wayland-protocols meson ninja libffi"
+build=meson setup build --prefix=/usr --buildtype=plain -Dtests=false -Ddocumentation=false -Ddocbook_validation=false -Ddtd_validation=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+
+category=graphics name=xkeyboard-config version=2.45 source=https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config/-/archive/$version/xkeyboard-config-$version.tar.xz license="MIT GPL-2.0-or-later OFL-1.1" description="Keyboard layouts and keymaps for X and Wayland"
+build=./configure --prefix=/usr --with-xkb-config-root=/usr/share/X11/xkb --disable-docs
+     make
+     make DESTDIR="$PKG" install
+
+category=graphics name=libxkbcommon version=1.11.0 source=https://gitlab.freedesktop.org/xkbcommon/libxkbcommon/-/archive/$version/libxkbcommon-$version.tar.gz license=MIT description="Keyboard layout handling for Wayland" depends="xkeyboard-config xorgproto meson ninja"
+build=meson setup build --prefix=/usr --buildtype=plain -Denable-x11=false -Denable-wayland=false -Denable-docs=false -Denable-xkcbtest=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+
+category=graphics name=pixman version=0.46.2 source=https://www.cairographics.org/releases/pixman-$version.tar.gz license=MIT description="Pixel manipulation library; also the renderer's last resort without a GPU" depends="meson ninja"
+build=meson setup build --prefix=/usr --buildtype=plain -Dgtk=disabled -Dlibpng=disabled -Dtests=disabled -Ddemos=disabled
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+
+category=graphics name=libevdev version=1.13.7 source=https://gitlab.freedesktop.org/libevdev/libevdev/-/archive/libevdev-$version/libevdev-libevdev-$version.tar.gz license=LGPL-2.1-or-later description="evdev input device access" depends="meson ninja"
+build=meson setup build --prefix=/usr --buildtype=plain -Ddocumentation=disabled -Dtests=disabled
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+
+category=graphics name=mtdev version=1.1.10 source=https://gitlab.freedesktop.org/mtdev/mtdev/-/archive/$version/mtdev-$version.tar.gz license=LGPL-2.1-or-later description="Multitouch protocol library, a libinput dependency" depends="autoconf automake"
+build=./autogen.sh
+     ./configure --prefix=/usr --disable-static
+     make
+     make DESTDIR="$PKG" install
+     find "$PKG" -name '*.la' -delete
+
+category=graphics name=libinput version=1.32.0 source=https://gitlab.freedesktop.org/libinput/libinput/-/archive/$version/libinput-$version.tar.gz license=LGPL-2.1-or-later description="Turns raw input events into touch, tablet and pointer gestures" depends="libevdev mtdev meson ninja"
+build=meson setup build --prefix=/usr --buildtype=plain -Ddocumentation=false -Dtests=false -Dlibwacom=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+
+category=graphics name=libdisplay-info version=0.3.0 source=https://gitlab.freedesktop.org/emersion/libdisplay-info/-/archive/$version/libdisplay-info-$version.tar.gz license=MIT description="Reads EDID and DisplayID so a compositor knows what a connector is" depends="meson ninja"
+build=meson setup build --prefix=/usr --buildtype=plain -Dtests=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+
+category=graphics name=hwdata version=0.385 source=https://gitlab.freedesktop.org/wayland-project/hwdata/-/archive/$version/hwdata-$version.tar.gz license="MIT GPL-2.0-or-later" description="Hardware ids, so a display gets a readable name" depends="meson ninja"
+build=meson setup build --prefix=/usr --buildtype=plain
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+
+category=graphics name=seatd version=0.9.3 source=https://git.sr.ht/~kennylevinsen/seatd/archive/$version.tar.gz license=MIT description="Session and seat management, which a Wayland compositor needs to hand out input and output access" depends="meson ninja"
+build=meson setup build --prefix=/usr --buildtype=plain -Ddefault_library=static -Ddocs=disabled
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+
+category=build name=expat version=2.7.1 source=https://github.com/libexpat/libexpat/releases/download/R_2_7_1/expat-$version.tar.xz license=MIT description="XML parser used by the graphics stack" depends=""
+build=./configure --prefix=/usr --disable-static --with-sysroot=/usr
+     make
+     make DESTDIR="$PKG" install
+     find "$PKG" -name '*.la' -delete
+
+category=build name=libffi version=3.5.2 source=https://github.com/libffi/libffi/releases/download/v$version/libffi-$version.tar.gz license=MIT description="Portable foreign function interface, needed by the Wayland scanner" depends=""
+build=./configure --prefix=/usr --disable-static --disable-multi-os-directory
+     make
+     make DESTDIR="$PKG" install
+     find "$PKG" -name '*.la' -delete
+
+category=build name=xorgproto version=2024.1 source=https://www.x.org/releases/individual/proto/xorgproto-$version.tar.gz license="MIT" description="X11 protocol headers, still needed by some Wayland tooling" depends=""
+build=./configure --prefix=/usr
+     make
+     make DESTDIR="$PKG" install
+     find "$PKG" -name '*.la' -delete

@@ -1,0 +1,13 @@
+name=libdrm
+version=2.4.134
+description="Kernel modesetting interface: the display drivers' userspace library"
+license=MIT
+source=https://gitlab.freedesktop.org/mesa/libdrm/-/archive/libdrm-$version/libdrm-libdrm-$version.tar.gz
+checksum(https://gitlab.freedesktop.org/mesa/libdrm/-/archive/libdrm-$version/libdrm-libdrm-$version.tar.gz)=28af861f62e7a2c3a48c5ff2ad4d01cf440a419f7f877de5caa7f73d3afa5367
+depends="meson ninja"
+
+build() {
+    meson setup build --prefix=/usr --buildtype=plain -Dtests=false -Dman-pages=disabled -Dinstall-test-programs=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+}

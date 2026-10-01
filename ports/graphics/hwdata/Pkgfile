@@ -1,0 +1,13 @@
+name=hwdata
+version=0.385
+description="Hardware ids, so a display gets a readable name"
+license="MIT GPL-2.0-or-later"
+source=https://gitlab.freedesktop.org/wayland-project/hwdata/-/archive/$version/hwdata-$version.tar.gz
+checksum(https://gitlab.freedesktop.org/wayland-project/hwdata/-/archive/$version/hwdata-$version.tar.gz)=3d60284b0468b2b56fee7b52545a447965b19890603dd99032f0ffbd3788f112
+depends="meson ninja"
+
+build() {
+    meson setup build --prefix=/usr --buildtype=plain
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+}

@@ -1,0 +1,15 @@
+name=mtdev
+version=1.1.10
+description="Multitouch protocol library, a libinput dependency"
+license=LGPL-2.1-or-later
+source=https://gitlab.freedesktop.org/mtdev/mtdev/-/archive/$version/mtdev-$version.tar.gz
+checksum(https://gitlab.freedesktop.org/mtdev/mtdev/-/archive/$version/mtdev-$version.tar.gz)=b74ded0f8e76e8bd266d14b3cc6d33411d7e34210cc18784fdc9d35f5c59600d
+depends="autoconf automake"
+
+build() {
+    ./autogen.sh
+     ./configure --prefix=/usr --disable-static
+     make
+     make DESTDIR="$PKG" install
+     find "$PKG" -name '*.la' -delete
+}

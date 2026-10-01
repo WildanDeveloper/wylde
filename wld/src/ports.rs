@@ -147,6 +147,7 @@ impl PortTree {
                     verify_checksum(&file, expected)?;
                 }
             }
+            require_archive(&file)?;
         }
 
         // patches: downloaded and verified next to the build, so build() can
@@ -391,6 +392,50 @@ fn cache_name(pkgfile: &Pkgfile, url: &str) -> String {
 
 /// Fetch a URL with whatever downloader the system has. A distro built from
 /// scratch has no curl on day one, so wget is tried too.
+/// Reject anything that is not an archive.
+///
+/// A mirror under load answers with an HTML error page and a 200 status. Left
+/// alone, that page ends up unpacked as a source tree, or worse, gets recorded
+/// as the package's checksum.
+fn looks_like_an_archive(path: &Path) -> bool {
+    let head = match read_head(path, 512) {
+        Some(bytes) => bytes,
+        None => return false,
+    };
+    const MAGIC: [&[u8]; 5] = [
+        &[0x1f, 0x8b],             // gzip
+        &[0xfd, b'7', b'z', b'X', b'Z', 0x00], // xz
+        b"BZh",                // bzip2
+        &[0x50, 0x4b, 0x03, 0x04],    // zip
+        &[0x28, 0xb5, 0x2f, 0xfd],    // zstd
+    ];
+    if MAGIC.iter().any(|m| head.starts_with(m)) {
+        return true;
+    }
+    // a plain tar has its magic at offset 257
+    head.len() > 262 && &head[257..262] == b"ustar"
+}
+
+fn read_head(path: &Path, count: usize) -> Option<Vec<u8>> {
+    use std::io::Read;
+    let mut file = fs::File::open(path).ok()?;
+    let mut buffer = vec![0u8; count];
+    let read = file.read(&mut buffer).ok()?;
+    buffer.truncate(read);
+    Some(buffer)
+}
+
+fn require_archive(path: &Path) -> Result<(), String> {
+    if looks_like_an_archive(path) {
+        return Ok(());
+    }
+    let _ = fs::remove_file(path);
+    Err(format!(
+        "{} is not an archive — the server most likely answered with an error page",
+        path.display()
+    ))
+}
+
 fn fetch(url: &str, dest: &Path) -> Result<(), String> {
     let attempts: [(&str, Vec<&str>); 2] = [
         ("curl", vec!["-fsSL", "-o"]),
@@ -540,3 +585,42 @@ fn verify_checksum(file: &Path, expected: &str) -> Result<(), String> {
 /// Placeholder so `Package` stays used in the public API of this module.
 #[allow(dead_code)]
 fn _package_type_marker(_: &Package) {}
+
+
+#[cfg(test)]
+mod archive_tests {
+    use super::*;
+    use std::io::Write;
+
+    fn write_temp(name: &str, bytes: &[u8]) -> PathBuf {
+        let path = std::env::temp_dir().join(name);
+        let mut file = fs::File::create(&path).unwrap();
+        file.write_all(bytes).unwrap();
+        path
+    }
+
+    #[test]
+    fn accepts_a_real_archive() {
+        let path = write_temp("wld-archive-test.gz", b"\x1f\x8b\x08rubbish but gzip-shaped");
+        assert!(looks_like_an_archive(&path));
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn rejects_an_html_error_page() {
+        // this is what a rate-limited mirror sends, with a 200 status
+        let path = write_temp(
+            "wld-archive-test.html",
+            b"<!DOCTYPE html><html><head><title>429 Too Many Requests</title>",
+        );
+        assert!(!looks_like_an_archive(&path));
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn rejects_an_empty_file() {
+        let path = write_temp("wld-archive-test-empty", b"");
+        assert!(!looks_like_an_archive(&path));
+        let _ = fs::remove_file(&path);
+    }
+}
