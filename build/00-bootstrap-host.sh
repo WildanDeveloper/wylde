@@ -27,6 +27,15 @@ own_tree() {
 }
 
 [ "$(id -u)" = 0 ] || die "must run as root"
+
+# A pin file whose last line lacks a newline loses that entry to every reader
+# that does `while read`. Checked once here so the mistake cannot be committed.
+for pin in "$PINNED/wget-list" "$PINNED/md5sums" "$PINNED/mirrors" "$PINNED/extra.list"; do
+    [ -s "$pin" ] || continue
+    if [ -n "$(tail -c1 "$pin")" ]; then
+        die "$pin does not end with a newline — its last entry would be ignored"
+    fi
+done
 log "$(uname -srm), $(awk -F: '/^VERSION_ID/{print $2}' /etc/os-release 2>/dev/null | tr -d '\"')"
 
 # ---------------------------------------------------------------- build user
@@ -102,6 +111,16 @@ else
     curl -fsSL "https://www.linuxfromscratch.org/lfs/downloads/$LFS_VER/md5sums" -o "$MD5SUMS"
 fi
 
+# Sources the book does not ship (see sources/extra.list). Pinned by sha256 and
+# fetched here, because a build script that assumes a tarball will otherwise
+# fail on every clean machine.
+EXTRA=$STATE/extra.list
+if [ -s "$PINNED/extra.list" ]; then
+    cp "$PINNED/extra.list" "$EXTRA"
+else
+    : > "$EXTRA"
+fi
+
 # Extra download locations for files whose home host is flaky. Same bytes, same
 # checksum: a download is only accepted once its md5 matches sources/md5sums.
 [ -s "$PINNED/mirrors" ] && cp "$PINNED/mirrors" "$MIRRORS" || : > "$MIRRORS"
@@ -171,7 +190,7 @@ for pass in 1 2 3; do
         url=$(grep -E "/${name}\$" "$WGET_LIST" | head -1)
         [ -n "$url" ] && urls+=("$url")
         if [ -s "$MIRRORS" ]; then
-            while read -r mfile murl; do
+            while read -r mfile murl || [ -n "${mfile:-}" ]; do
                 [ "$mfile" = "$name" ] && urls+=("$murl")
             done < "$MIRRORS"
         fi
@@ -200,6 +219,31 @@ for pass in 1 2 3; do
     export SOURCES WGET_LIST
     xargs -a "$todo" -d '\n' -P 4 -I{} bash -c 'fetch_one "$@"' _ {} || true
 done
+
+# ---------------------------------------------------------------- extra files
+
+if [ -s "$EXTRA" ]; then
+    # url sha256 [local-name]: the local name is pinned too, because upstream
+    # archive names change (v10.5.2.tar.gz is not a stable thing to build on)
+    while read -r url expected localname || [ -n "${url:-}" ]; do
+        case "$url" in \#*|"") continue ;; esac
+        name=${localname:-${url##*/}}
+        actual=""
+        [ -s "$SOURCES/$name" ] && actual=$(sha256sum "$SOURCES/$name" | cut -d" " -f1)
+        if [ "$actual" != "$expected" ]; then
+            [ -n "$actual" ] && rm -f "$SOURCES/$name"
+            log "fetching $name"
+            if curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors \
+                    -o "$SOURCES/$name" "$url"; then
+                actual=$(sha256sum "$SOURCES/$name" | cut -d" " -f1)
+            fi
+        fi
+        if [ "$actual" != "$expected" ]; then
+            die "$name could not be fetched or its sha256 does not match $expected"
+        fi
+        log "  $name verified"
+    done < "$EXTRA"
+fi
 
 log "verifying checksums"
 missing_md5=$STATE/missing-md5

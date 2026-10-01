@@ -264,7 +264,7 @@ for lib in ncurses form panel menu ; do
   ln -sfv ${lib}w.pc    /usr/lib/pkgconfig/${lib}.pc
 done
 ln -sfv libncursesw.so /usr/lib/libcurses.so
-cp -v -R doc -T /usr/share/doc/ncurses-6.6-20260926
+cp -v -R doc -T /usr/share/doc/ncurses-6.6
 make distclean
 ./configure --prefix=/usr         \
             --with-shared         \

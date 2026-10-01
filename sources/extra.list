@@ -1,0 +1,10 @@
+# Sources the build needs that the book does not ship:  url  sha256
+#
+# The LFS list in wget-list covers the book. A few packages Wylde needs come
+# from elsewhere, and a build that silently expects a tarball nobody downloads
+# fails hours later on a clean machine. Everything here is pinned and verified
+# exactly like the book's files.
+
+# DHCP client. The upstream release tarball is not published; the tagged git
+# archive is, and 09-dhcpcd.sh unpacks it as dhcpcd-10.5.2.
+https://github.com/NetworkConfiguration/dhcpcd/archive/refs/tags/v10.5.2.tar.gz 6040a01c69a17dc166d350f6dacf8444ab1e1945481bc84ff50d7ca74364b78d dhcpcd-v10.5.2.tar.gz

@@ -172,13 +172,13 @@ STAGE
   rm -rf "$LFS/sources"/$dirglob
 }
 
-simple_stage m4 m4-*.tar.gz 'm4-*' './configure --prefix=/usr \
+simple_stage m4 m4-1.4.20.tar.xz 'm4-1.4.20' './configure --prefix=/usr \
     --host=$LFS_TGT \
     --build=$(build-aux/config.guess)
 make
 make DESTDIR=$LFS install'
 
-simple_stage ncurses ncurses-*.tgz 'ncurses-*' 'mkdir build
+simple_stage ncurses ncurses-6.6.tar.gz 'ncurses-6.6' 'mkdir build
 pushd build
   ../configure --prefix=$LFS/tools AWK=gawk
   make -C include

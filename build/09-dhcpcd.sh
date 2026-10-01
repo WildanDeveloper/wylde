@@ -1,7 +1,8 @@
 #!/bin/bash
 # Wylde — dhcpcd (DHCP client) and network boot integration
-# dhcpcd is a BLFS package, not in the LFS wget-list; source is the GitHub
-# release tarball (v10.5.2).
+# dhcpcd is not in the LFS wget-list. build/00-bootstrap-host.sh downloads the
+# pinned tagged archive from sources/extra.list as dhcpcd-v10.5.2.tar.gz and
+# verifies its sha256 before this script touches it.
 set -e
 export LFS=/mnt/lfs
 export LOGDIR=${LOGDIR:-/tmp/wylde-build}
@@ -27,7 +28,7 @@ stage dhcpcd <<'XEOF'
 set -e
 cd /sources
 rm -rf dhcpcd-10.5.2
-tar -xf dhcpcd-10.5.2.tar.gz
+tar -xf dhcpcd-v10.5.2.tar.gz
 cd dhcpcd-10.5.2
 ./configure --prefix=/usr --sysconfdir=/etc --runstatedir=/run --dbdir=/var/lib/dhcpcd
 make -j4

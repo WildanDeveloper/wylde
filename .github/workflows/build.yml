@@ -24,6 +24,10 @@ jobs:
             gcc g++ make bison flex m4 texinfo patch perl \
             python3 xz-utils bzip2 wget curl git ca-certificates
 
+      - name: every archive the build unpacks is part of the pinned sources
+        # catches a renamed tarball before a three-hour build does
+        run: python3 tools/check-build-sources.py
+
       - name: every source in the tree is downloadable and intact
         # stronger than a local file check: proves every URL is alive and every
         # checksum still matches upstream
@@ -79,6 +83,10 @@ jobs:
         env:
           LFS: /mnt/lfs
           LOGDIR: /tmp/wylde-build
+
+      - name: show the build log when something fails
+        if: failure()
+        run: tail -n 200 /tmp/wylde-build/build.log || true
 
       - name: build wld
         working-directory: wld
