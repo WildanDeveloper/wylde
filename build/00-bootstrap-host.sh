@@ -84,6 +84,7 @@ own_tree "$LFS"
 mkdir -p "$STATE"
 WGET_LIST=$STATE/wget-list
 MD5SUMS=$STATE/md5sums
+MIRRORS=$STATE/mirrors
 
 # The pinned list in sources/ is what this system was actually built from and is
 # the one the recipes expect: upstream republishes the LFS source list when a
@@ -100,6 +101,10 @@ else
     curl -fsSL "https://www.linuxfromscratch.org/lfs/downloads/$LFS_VER/wget-list" -o "$WGET_LIST"
     curl -fsSL "https://www.linuxfromscratch.org/lfs/downloads/$LFS_VER/md5sums" -o "$MD5SUMS"
 fi
+
+# Extra download locations for files whose home host is flaky. Same bytes, same
+# checksum: a download is only accepted once its md5 matches sources/md5sums.
+[ -s "$PINNED/mirrors" ] && cp "$PINNED/mirrors" "$MIRRORS" || : > "$MIRRORS"
 [ -s "$WGET_LIST" ] || die "could not fetch the source list"
 [ -s "$MD5SUMS" ] || die "could not fetch md5sums"
 
@@ -110,15 +115,26 @@ wanted() {
     sed 's/#.*//' "$WGET_LIST" | awk 'NF {n=$0; sub(/.*\//,"",n); print n}' | sort -u
 }
 
+# md5 of a file that is present, or an empty string when it is absent or wrong.
+# Existence is not enough: a truncated download would otherwise be accepted
+# forever, and no retry could ever replace it.
+have_md5() {
+    [ -s "$SOURCES/$1" ] || return 0
+    md5sum "$SOURCES/$1" 2>/dev/null | cut -d" " -f1
+}
+
+want_md5() {
+    sed 's/^[ *]*//' "$MD5SUMS" | awk -v f="$1" '$2 == f {print $1; exit}'
+}
+
 have_count() {
-    local want
-    want=$(mktemp)
-    wanted > "$want"
-    local found=0 name
+    local found=0 name expected actual
     while read -r name; do
-        [ -s "$SOURCES/$name" ] && found=$((found + 1))
-    done < "$want"
-    rm -f "$want"
+        expected=$(want_md5 "$name")
+        actual=$(have_md5 "$name")
+        [ -n "$expected" ] || { [ -n "$actual" ] && found=$((found + 1)); continue; }
+        [ "$actual" = "$expected" ] && found=$((found + 1))
+    done < <(wanted)
     echo "$found"
 }
 
@@ -131,6 +147,12 @@ for pass in 1 2 3; do
     todo=$STATE/wget-todo.$pass
     : > "$todo"
     while read -r name; do
+        expected=$(want_md5 "$name")
+        actual=$(have_md5 "$name")
+        if [ -n "$expected" ] && [ "$actual" != "$expected" ]; then
+            # wrong bytes on disk: throw them away so the retry can work
+            rm -f "$SOURCES/$name"
+        fi
         [ -s "$SOURCES/$name" ] || echo "$name" >> "$todo"
     done < <(wanted)
 
@@ -140,21 +162,39 @@ for pass in 1 2 3; do
 
     # four at a time: enough to be quick, few enough to stay polite
     fetch_one() {
-        name=$1
+        local name=$1 expected url ok=1
+        expected=$(want_md5 "$name")
+
+        # the pinned url first, then any mirror listed for this file. A bash
+        # array rather than a pipeline: a subshell cannot report success back.
+        local -a urls=()
         url=$(grep -E "/${name}\$" "$WGET_LIST" | head -1)
-        if [ -z "$url" ]; then
-            echo "  no url for $name" >&2
-            return 1
+        [ -n "$url" ] && urls+=("$url")
+        if [ -s "$MIRRORS" ]; then
+            while read -r mfile murl; do
+                [ "$mfile" = "$name" ] && urls+=("$murl")
+            done < "$MIRRORS"
         fi
-        if curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors \
-                -o "$SOURCES/$name.part" "$url"; then
+
+        for url in "${urls[@]}"; do
+            if ! curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors \
+                    -o "$SOURCES/$name.part" "$url" 2>/dev/null; then
+                echo "  unreachable: $url" >&2
+                rm -f "$SOURCES/$name.part"
+                continue
+            fi
+            if [ -n "$expected" ] && [ "$(md5sum "$SOURCES/$name.part" | cut -d" " -f1)" != "$expected" ]; then
+                echo "  wrong bytes from $url, trying the next source" >&2
+                rm -f "$SOURCES/$name.part"
+                continue
+            fi
             mv "$SOURCES/$name.part" "$SOURCES/$name"
             echo "  got $name"
-            return 0
-        fi
-        echo "  failed: $name" >&2
-        rm -f "$SOURCES/$name.part"
-        return 1
+            ok=0
+            break
+        done
+
+        [ "$ok" -eq 0 ] || { echo "  failed: $name" >&2; return 1; }
     }
     export -f fetch_one
     export SOURCES WGET_LIST

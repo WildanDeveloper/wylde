@@ -1,0 +1,9 @@
+# Alternate download locations:  filename  url
+#
+# Used only when the pinned URL in wget-list fails or returns the wrong bytes.
+# A download is accepted only after its md5 matches sources/md5sums, so these
+# must serve identical files, not "close enough" ones.
+
+# zlib.net has been observed to answer runners with an error page or a partial
+# body; the GitHub release asset is byte-identical.
+zlib-1.3.1.tar.gz https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz

@@ -3,8 +3,6 @@
 set -e
 
 VERSION=0.1-alpha
-KERNEL=6.16.1
-LFS_BOOTSCRIPTS=20250827
 MOUNT=/mnt/wylde
 
 usage() {
@@ -40,10 +38,13 @@ ask() {
     printf -v "$var" '%s' "$answer"
 }
 
-[ $EUID -eq 0 ] || die "must run as root"
+# --help is answered before anything else: asking how the installer works must
+# never require privilege, and must never be able to touch a disk.
 case "${1:-}" in
     --help|-h) usage; exit 0 ;;
 esac
+
+[ $EUID -eq 0 ] || die "must run as root"
 MODE=${1:-guided}
 [ "$MODE" = "--expert" ] || MODE=guided
 
