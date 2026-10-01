@@ -1,5 +1,6 @@
 {
-  "boot_seconds": 0.0,
-  "ram_idle_kib": 0,
-  "ram_total_kib": 0
+  "boot_seconds": 63.47,
+  "ram_total_kib": 2029112,
+  "ram_idle_kib": 46252,
+  "_note": "measured under QEMU TCG emulation (no KVM), which inflates boot time; ram_idle_kib is a real number"
 }
