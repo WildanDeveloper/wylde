@@ -215,8 +215,10 @@ for pass in 1 2 3; do
 
         [ "$ok" -eq 0 ] || { echo "  failed: $name" >&2; return 1; }
     }
-    export -f fetch_one
-    export SOURCES WGET_LIST
+    # xargs runs the fetcher in a fresh bash: every function and variable it
+    # touches has to be exported, or it fails with "command not found"
+    export -f fetch_one want_md5
+    export SOURCES WGET_LIST MD5SUMS
     xargs -a "$todo" -d '\n' -P 4 -I{} bash -c 'fetch_one "$@"' _ {} || true
 done
 

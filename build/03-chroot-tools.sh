@@ -17,6 +17,7 @@ INNER
     echo "[$(date +%H:%M:%S)] DONE $1" >> "$LOGDIR/build.log"
   else
     echo "[$(date +%H:%M:%S)] FAIL $1 — see $LOGDIR/$1.log" >> "$LOGDIR/build.log"
+    tail -n 25 "$LOGDIR/$1.log" >&2 || true
     exit 1
   fi
 }
