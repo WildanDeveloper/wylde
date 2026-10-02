@@ -2,7 +2,12 @@
 # Wylde — build a bootable disk image (roadmap 1d)
 # Layout: MBR (legacy BIOS/GRUB) + 2 partitions (swap, root ext4)
 set -e
-LFS=/mnt/lfs
+# Source tree for the image. Normally this is a plain directory (a copy of the
+# chroot) because the chroot's own image cannot be opened by QEMU while nbd
+# holds it, and rsync-ing a mounted filesystem back onto its image is how you
+# get a corrupted filesystem. Set LFS=/mnt/lfs only when /mnt/lfs is a plain
+# directory, not a mount.
+LFS=${LFS:-/root/lfs-root}
 IMG=${1:-/mnt/wylde/wylde.img}
 MNT=/mnt/wyldemnt
 KV=6.16.1
@@ -80,6 +85,9 @@ mkdir -p "$MNT"/{dev,proc,sys}
 mount --bind /dev "$MNT/dev"
 mount -t proc proc "$MNT/proc"
 mount -t sysfs sysfs "$MNT/sys"
+# start from an empty boot area: a leftover directory from an earlier install
+# makes grub-install fail on a directory it expects to be a file
+rm -rf "$MNT/boot/grub"
 mkdir -p "$MNT/boot/grub"
 chroot "$MNT" /usr/sbin/grub-install --target=i386-pc "$LOOP" --recheck
 # grub-mkconfig derives root= from the running system, which is the loop device;

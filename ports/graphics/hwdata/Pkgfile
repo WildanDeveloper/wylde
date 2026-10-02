@@ -1,13 +1,13 @@
 name=hwdata
-version=0.385
+version=0.411
 description="Hardware ids, so a display gets a readable name"
 license="MIT GPL-2.0-or-later"
-source=https://gitlab.freedesktop.org/wayland-project/hwdata/-/archive/$version/hwdata-$version.tar.gz
-checksum(https://gitlab.freedesktop.org/wayland-project/hwdata/-/archive/$version/hwdata-$version.tar.gz)=3d60284b0468b2b56fee7b52545a447965b19890603dd99032f0ffbd3788f112
+source=https://deb.debian.org/debian/pool/main/h/hwdata/hwdata_$version.orig.tar.gz
+checksum(https://deb.debian.org/debian/pool/main/h/hwdata/hwdata_$version.orig.tar.gz)=0b0508d1f17014aeb216f1cab9216f1377fd7c211ac94e0498c234e1e4a468d5
 depends="meson ninja"
 
 build() {
-    meson setup build --prefix=/usr --buildtype=plain
-     ninja -C build
-     DESTDIR="$PKG" ninja -C build install
+    ./configure --prefix=/usr --with-pciids=false
+     make
+     make DESTDIR="$PKG" install
 }

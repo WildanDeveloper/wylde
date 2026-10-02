@@ -1,0 +1,13 @@
+name=labwc
+version=0.8.3
+description="A small, fast, scriptable Wayland compositor"
+license="MIT"
+source=https://deb.debian.org/debian/pool/main/l/labwc/labwc_0.8.3.orig.tar.gz
+checksum(https://deb.debian.org/debian/pool/main/l/labwc/labwc_0.8.3.orig.tar.gz)=746be2ff2d0c0c0b795c97fa24c7058f75586685c88a1194c243b6a846f938a5
+depends="wlroots wayland libxkbcommon xorgproto seatd libdrm glib pango cairo meson ninja"
+
+build() {
+    meson setup build --prefix=/usr --buildtype=plain -Dman-pages=disabled -Dnls=disabled -Dtest=disabled -Dsvg=disabled
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+}

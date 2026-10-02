@@ -1,0 +1,14 @@
+name=mesa
+version=26.2.3
+description="The GL and EGL implementations, including the software rasteriser that lets a session start with no GPU"
+license="MIT"
+source=https://deb.debian.org/debian/pool/main/m/mesa/mesa_$version.orig.tar.xz
+checksum(https://deb.debian.org/debian/pool/main/m/mesa/mesa_$version.orig.tar.xz)=1628058a8d2c0615975de5a15ab7bbb9638c50000b5bed9456ff423ea034a81f
+depends="libdrm expat zlib python meson ninja"
+srcdir=mesa-$version
+
+build() {
+    meson setup build --prefix=/usr --buildtype=plain -Dllvm=disabled -Dgallium-drivers=softpipe -Dvulkan-drivers= -Dgles2=enabled -Dgles1=disabled -Dopengl=true -Dglx=disabled -Dshared-glapi=enabled -Dplatforms=wayland -Dbuild-tests=false -Denable-glcpp-tests=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+}

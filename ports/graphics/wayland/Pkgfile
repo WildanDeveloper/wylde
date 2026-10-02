@@ -2,9 +2,10 @@ name=wayland
 version=1.26.0
 description="The Wayland compositor and client library"
 license=MIT
-source=https://gitlab.freedesktop.org/wayland/wayland/-/archive/$version/wayland-$version.tar.gz
-checksum(https://gitlab.freedesktop.org/wayland/wayland/-/archive/$version/wayland-$version.tar.gz)=56b3a985cbfe17a926e3bcf037e4d374f44eaa33f3a4b364549dddf0d324cebc
+source=https://deb.debian.org/debian/pool/main/w/wayland/wayland_$version.orig.tar.xz
+checksum(https://deb.debian.org/debian/pool/main/w/wayland/wayland_$version.orig.tar.xz)=64176eaa46e4969903e286f8e5ef8331affc17fdf03ac9b58381d2b23162b7a3
 depends="libdrm wayland-protocols meson ninja libffi"
+srcdir=wayland-$version
 
 build() {
     meson setup build --prefix=/usr --buildtype=plain -Dtests=false -Ddocumentation=false -Ddocbook_validation=false -Ddtd_validation=false

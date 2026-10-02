@@ -1,0 +1,6 @@
+# Runs inside the session, once the compositor is up. Everything here should be
+# optional: a session that needs four programs to be useful is not a session.
+exec_always {
+    # a window that says which desktop this is and what is still missing
+    exec /usr/bin/wylde-welcome
+}

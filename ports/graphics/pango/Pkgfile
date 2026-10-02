@@ -1,0 +1,13 @@
+name=pango
+version=1.56.4
+description="Text layout with shaping; a compositor draws text with it"
+license=LGPL-2.1-or-later
+source=https://download.gnome.org/sources/pango/1.56/pango-$version.tar.xz
+checksum(https://download.gnome.org/sources/pango/1.56/pango-$version.tar.xz)=17065e2fcc5f5a5bdbffc884c956bfc7c451a96e8c4fb2f8ad837c6413cb5a01
+depends="cairo glib harfbuzz fribidi meson ninja"
+
+build() {
+    meson setup build --prefix=/usr --buildtype=plain -Dintrospection=disabled -Dbuild-testsuite=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+}

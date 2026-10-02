@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<!-- Wylde session configuration: one screen, one workspace, English layout.
+     Everything else a user would add belongs in their own ~/.config/labwc. -->
+<labwc_config xmlns="http://labwc.org/labwc">
+
+  <desktops>
+    <desktop name="one" x="1280" y="720"/>
+  </desktops>
+
+  <keyboard>
+    <key name="Escape" modifier="Alt" action="spawn" command="labwc-close"/>
+    <key name="Return" modifier="Alt" action="spawn" command="foot"/>
+  </keyboard>
+
+  <mouse>
+    <context name="Client" pointer="Press" action="close"/>
+  </mouse>
+
+  <focus>
+    <focusNew>sloppy</focusNew>
+    <followMouse>yes</followMouse>
+  </focus>
+
+  <desktop>
+    <desktops>1</desktops>
+  </desktop>
+
+</labwc_config>

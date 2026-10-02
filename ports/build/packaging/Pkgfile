@@ -1,0 +1,12 @@
+name=packaging
+version=25.0
+description="Version comparison for Python; Python 3.13 dropped distutils and mesa's build checks versions with it"
+license="Apache-2.0 OR BSD-2-Clause"
+source=https://github.com/pypa/packaging/archive/refs/tags/$version.tar.gz
+checksum(https://github.com/pypa/packaging/archive/refs/tags/$version.tar.gz)=15b6ba95eb12d8f99dcf215ea37cbea16812ef28358e8ef3d9344acb827acac1
+srcdir=packaging-$version
+
+build() {
+    mkdir -p "$PKG/usr/lib/python3.13/site-packages"
+     cp -r "$SRCDIR/src/packaging" "$PKG/usr/lib/python3.13/site-packages/"
+}

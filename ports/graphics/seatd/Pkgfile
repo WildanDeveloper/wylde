@@ -7,7 +7,7 @@ checksum(https://git.sr.ht/~kennylevinsen/seatd/archive/$version.tar.gz)=302564d
 depends="meson ninja"
 
 build() {
-    meson setup build --prefix=/usr --buildtype=plain -Ddefault_library=static -Ddocs=disabled
+    meson setup build --prefix=/usr --buildtype=plain -Dman-pages=disabled -Dexamples=disabled
      ninja -C build
      DESTDIR="$PKG" ninja -C build install
 }

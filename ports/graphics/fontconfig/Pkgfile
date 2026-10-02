@@ -1,0 +1,15 @@
+name=fontconfig
+version=2.17.1
+description="Finds and caches the fonts on the system"
+license="MIT"
+source=https://deb.debian.org/debian/pool/main/f/fontconfig/fontconfig_$version.orig.tar.gz
+checksum(https://deb.debian.org/debian/pool/main/f/fontconfig/fontconfig_$version.orig.tar.gz)=f07504cef87f171ee1748352e2df9b9f125352f620fa0d03a9284306ea2c40a4
+depends="expat freetype zlib"
+
+build() {
+    meson setup build --prefix=/usr --buildtype=plain -Ddoc=disabled -Ddoc-txt=disabled -Ddoc-man=disabled -Dtests=disabled
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+     # an empty cache directory: the real cache is written at first boot
+     mkdir -p "$PKG/var/cache/fontconfig"
+}

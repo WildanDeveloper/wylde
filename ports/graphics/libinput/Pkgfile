@@ -1,13 +1,13 @@
 name=libinput
-version=1.32.0
+version=1.28.1
 description="Turns raw input events into touch, tablet and pointer gestures"
 license=LGPL-2.1-or-later
-source=https://gitlab.freedesktop.org/libinput/libinput/-/archive/$version/libinput-$version.tar.gz
-checksum(https://gitlab.freedesktop.org/libinput/libinput/-/archive/$version/libinput-$version.tar.gz)=7dd6c1ca964c86eb6810ccd6639cda634e68bdca43bf3afec39e94e942fac8d4
+source=https://deb.debian.org/debian/pool/main/libi/libinput/libinput_$version.orig.tar.gz
+checksum(https://deb.debian.org/debian/pool/main/libi/libinput/libinput_$version.orig.tar.gz)=a13f8c9a7d93df3c85c66afd135f0296701d8d32f911991b7aa4273fdd6a42a3
 depends="libevdev mtdev meson ninja"
 
 build() {
-    meson setup build --prefix=/usr --buildtype=plain -Ddocumentation=false -Dtests=false -Dlibwacom=false
+    meson setup build --prefix=/usr --buildtype=plain -Ddocumentation=false -Dtests=false -Dlibwacom=false -Ddebug-gui=false
      ninja -C build
      DESTDIR="$PKG" ninja -C build install
 }

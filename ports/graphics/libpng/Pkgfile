@@ -1,0 +1,15 @@
+name=libpng
+version=1.6.50
+description="PNG codec, needed by the terminal and every screenshot tool"
+license="PNG"
+source=https://github.com/pnggroup/libpng/archive/refs/tags/v$version.tar.gz
+checksum(https://github.com/pnggroup/libpng/archive/refs/tags/v$version.tar.gz)=71158e53cfdf2877bc99bcab33641d78df3f48e6e0daad030afe9cb8c031aa46
+depends="zlib"
+srcdir=libpng-$version
+
+build() {
+    ./configure --prefix=/usr --disable-static
+     make
+     make DESTDIR="$PKG" install
+     find "$PKG" -name '*.la' -delete
+}

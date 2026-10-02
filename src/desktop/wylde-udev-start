@@ -1,0 +1,21 @@
+#!/bin/sh
+# Wylde — start hotplug and let it see the hardware that already exists.
+#
+# udevd reacts to events. A device that was plugged in before the daemon
+# started never produced one, so without an explicit trigger it keeps its
+# default properties: libinput then reports no input devices and the compositor
+# refuses to start. Trigger, then wait until the queue is empty, so the session
+# starts against a settled system.
+set -e
+
+echo "[udev] starting the hotplug daemon"
+/usr/sbin/udevd --daemon
+
+echo "[udev] applying events to the devices already present"
+udevadm trigger --action=add
+
+echo "[udev] waiting for the queue to drain"
+udevadm settle --timeout=15 || true
+
+echo "[udev] done"
+exit 0

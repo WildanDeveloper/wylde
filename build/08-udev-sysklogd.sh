@@ -63,6 +63,8 @@ install -vm755 -d /etc/udev/hwdb.d /etc/udev/rules.d /etc/udev/network
 install -vm755 -d /usr/lib/pkgconfig /usr/share/pkgconfig
 install -vm755 udevadm                     /usr/bin/
 install -vm755 systemd-hwdb                /usr/bin/udev-hwdb
+# systemd 257 ships one binary: udevadm runs as a daemon when it is called
+# through this name, which is what meson does upstream as well.
 ln      -svfn  ../bin/udevadm              /usr/sbin/udevd
 cp      -av    libudev.so.1.*               /usr/lib/
 ln -sf libudev.so.1 /usr/lib/libudev.so

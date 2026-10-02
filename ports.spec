@@ -297,28 +297,28 @@ build=./configure --prefix=/usr
 # has no GPU at all. Mesa and LLVM come after the compositor works.
 # ============================================================================
 
-category=graphics name=wayland-protocols version=1.49 source=https://gitlab.freedesktop.org/wayland/wayland-protocols/-/archive/$version/wayland-protocols-$version.tar.gz license=MIT description="Interface definitions every Wayland component shares" depends="meson ninja"
+category=graphics name=wayland-protocols version=1.49 source=https://deb.debian.org/debian/pool/main/w/wayland-protocols/wayland-protocols_$version.orig.tar.xz license=MIT description="Interface definitions every Wayland component shares" depends="meson ninja" srcdir=wayland-protocols-$version
 build=meson setup build --prefix=/usr --buildtype=plain -Dtests=false
      ninja -C build
      DESTDIR="$PKG" ninja -C build install
 
-category=graphics name=libdrm version=2.4.134 source=https://gitlab.freedesktop.org/mesa/libdrm/-/archive/libdrm-$version/libdrm-libdrm-$version.tar.gz license=MIT description="Kernel modesetting interface: the display drivers' userspace library" depends="meson ninja"
+category=graphics name=libdrm version=2.4.134 source=https://deb.debian.org/debian/pool/main/libd/libdrm/libdrm_$version.orig.tar.xz license=MIT description="Kernel modesetting interface: the display drivers' userspace library" depends="meson ninja" srcdir=libdrm-$version
 build=meson setup build --prefix=/usr --buildtype=plain -Dtests=false -Dman-pages=disabled -Dinstall-test-programs=false
      ninja -C build
      DESTDIR="$PKG" ninja -C build install
 
-category=graphics name=wayland version=1.26.0 source=https://gitlab.freedesktop.org/wayland/wayland/-/archive/$version/wayland-$version.tar.gz license=MIT description="The Wayland compositor and client library" depends="libdrm wayland-protocols meson ninja libffi"
+category=graphics name=wayland version=1.26.0 source=https://deb.debian.org/debian/pool/main/w/wayland/wayland_$version.orig.tar.xz license=MIT description="The Wayland compositor and client library" depends="libdrm wayland-protocols meson ninja libffi" srcdir=wayland-$version
 build=meson setup build --prefix=/usr --buildtype=plain -Dtests=false -Ddocumentation=false -Ddocbook_validation=false -Ddtd_validation=false
      ninja -C build
      DESTDIR="$PKG" ninja -C build install
 
-category=graphics name=xkeyboard-config version=2.45 source=https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config/-/archive/$version/xkeyboard-config-$version.tar.xz license="MIT GPL-2.0-or-later OFL-1.1" description="Keyboard layouts and keymaps for X and Wayland"
-build=./configure --prefix=/usr --with-xkb-config-root=/usr/share/X11/xkb --disable-docs
-     make
-     make DESTDIR="$PKG" install
+category=graphics name=xkeyboard-config version=2.48 source=https://deb.debian.org/debian/pool/main/x/xkeyboard-config/xkeyboard-config_$version.orig.tar.xz license="MIT GPL-2.0-or-later OFL-1.1" description="Keyboard layouts and keymaps for X and Wayland" srcdir=xkeyboard-config-$version
+build=meson setup build --prefix=/usr --buildtype=plain -Dnls=false -Dcompat-rules=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
 
-category=graphics name=libxkbcommon version=1.11.0 source=https://gitlab.freedesktop.org/xkbcommon/libxkbcommon/-/archive/$version/libxkbcommon-$version.tar.gz license=MIT description="Keyboard layout handling for Wayland" depends="xkeyboard-config xorgproto meson ninja"
-build=meson setup build --prefix=/usr --buildtype=plain -Denable-x11=false -Denable-wayland=false -Denable-docs=false -Denable-xkcbtest=false
+category=graphics name=libxkbcommon version=1.13.1 source=https://deb.debian.org/debian/pool/main/libx/libxkbcommon/libxkbcommon_$version.orig.tar.gz license=MIT description="Keyboard layout handling for Wayland" depends="xkeyboard-config xorgproto libxml2 meson ninja"
+build=meson setup build --prefix=/usr --buildtype=plain -Denable-x11=false -Denable-wayland=false -Denable-docs=false
      ninja -C build
      DESTDIR="$PKG" ninja -C build install
 
@@ -327,35 +327,35 @@ build=meson setup build --prefix=/usr --buildtype=plain -Dgtk=disabled -Dlibpng=
      ninja -C build
      DESTDIR="$PKG" ninja -C build install
 
-category=graphics name=libevdev version=1.13.7 source=https://gitlab.freedesktop.org/libevdev/libevdev/-/archive/libevdev-$version/libevdev-libevdev-$version.tar.gz license=LGPL-2.1-or-later description="evdev input device access" depends="meson ninja"
+category=graphics name=libevdev version=1.13.7 source=https://deb.debian.org/debian/pool/main/libe/libevdev/libevdev_$version+dfsg.orig.tar.xz license=LGPL-2.1-or-later description="evdev input device access" depends="meson ninja" srcdir=libevdev-$version
 build=meson setup build --prefix=/usr --buildtype=plain -Ddocumentation=disabled -Dtests=disabled
      ninja -C build
      DESTDIR="$PKG" ninja -C build install
 
-category=graphics name=mtdev version=1.1.10 source=https://gitlab.freedesktop.org/mtdev/mtdev/-/archive/$version/mtdev-$version.tar.gz license=LGPL-2.1-or-later description="Multitouch protocol library, a libinput dependency" depends="autoconf automake"
-build=./autogen.sh
-     ./configure --prefix=/usr --disable-static
+category=graphics name=mtdev version=1.1.7 source=https://deb.debian.org/debian/pool/main/m/mtdev/mtdev_$version.orig.tar.gz license=LGPL-2.1-or-later description="Multitouch protocol library, a libinput dependency" depends="autoconf automake" srcdir=mtdev-$version
+build=./configure --prefix=/usr --disable-static
      make
      make DESTDIR="$PKG" install
      find "$PKG" -name '*.la' -delete
 
-category=graphics name=libinput version=1.32.0 source=https://gitlab.freedesktop.org/libinput/libinput/-/archive/$version/libinput-$version.tar.gz license=LGPL-2.1-or-later description="Turns raw input events into touch, tablet and pointer gestures" depends="libevdev mtdev meson ninja"
-build=meson setup build --prefix=/usr --buildtype=plain -Ddocumentation=false -Dtests=false -Dlibwacom=false
+category=graphics name=libinput version=1.28.1 source=https://deb.debian.org/debian/pool/main/libi/libinput/libinput_$version.orig.tar.gz license=LGPL-2.1-or-later description="Turns raw input events into touch, tablet and pointer gestures" depends="libevdev mtdev meson ninja"
+build=meson setup build --prefix=/usr --buildtype=plain -Ddocumentation=false -Dtests=false -Dlibwacom=false -Ddebug-gui=false
      ninja -C build
      DESTDIR="$PKG" ninja -C build install
 
-category=graphics name=libdisplay-info version=0.3.0 source=https://gitlab.freedesktop.org/emersion/libdisplay-info/-/archive/$version/libdisplay-info-$version.tar.gz license=MIT description="Reads EDID and DisplayID so a compositor knows what a connector is" depends="meson ninja"
-build=meson setup build --prefix=/usr --buildtype=plain -Dtests=false
-     ninja -C build
-     DESTDIR="$PKG" ninja -C build install
-
-category=graphics name=hwdata version=0.385 source=https://gitlab.freedesktop.org/wayland-project/hwdata/-/archive/$version/hwdata-$version.tar.gz license="MIT GPL-2.0-or-later" description="Hardware ids, so a display gets a readable name" depends="meson ninja"
+category=graphics name=libdisplay-info version=0.3.0 source=https://deb.debian.org/debian/pool/main/libd/libdisplay-info/libdisplay-info_$version.orig.tar.bz2 license=MIT description="Reads EDID and DisplayID so a compositor knows what a connector is" depends="meson ninja" srcdir=libdisplay-info-$version
 build=meson setup build --prefix=/usr --buildtype=plain
      ninja -C build
      DESTDIR="$PKG" ninja -C build install
 
+category=graphics name=hwdata version=0.411 source=https://deb.debian.org/debian/pool/main/h/hwdata/hwdata_$version.orig.tar.gz license="MIT GPL-2.0-or-later" description="Hardware ids, so a display gets a readable name" depends="meson ninja"
+build=./configure --prefix=/usr --with-pciids=false
+     make
+     make DESTDIR="$PKG" install
+
+
 category=graphics name=seatd version=0.9.3 source=https://git.sr.ht/~kennylevinsen/seatd/archive/$version.tar.gz license=MIT description="Session and seat management, which a Wayland compositor needs to hand out input and output access" depends="meson ninja"
-build=meson setup build --prefix=/usr --buildtype=plain -Ddefault_library=static -Ddocs=disabled
+build=meson setup build --prefix=/usr --buildtype=plain -Dman-pages=disabled -Dexamples=disabled
      ninja -C build
      DESTDIR="$PKG" ninja -C build install
 
@@ -376,3 +376,114 @@ build=./configure --prefix=/usr
      make
      make DESTDIR="$PKG" install
      find "$PKG" -name '*.la' -delete
+
+
+category=build name=libxml2 version=2.14.5 source=https://download.gnome.org/sources/libxml2/2.14/libxml2-$version.tar.xz license=MIT description="XML parser; the Wayland server and labwc's menu both want it" depends="python"
+build=./autogen.sh --prefix=/usr --without-python --with-html=man --with-modules
+     make
+     make DESTDIR="$PKG" install
+     find "$PKG" -name '*.la' -delete
+
+category=graphics name=mesa version=26.2.3 source=https://deb.debian.org/debian/pool/main/m/mesa/mesa_$version.orig.tar.xz license="MIT" description="The GL and EGL implementations, including the software rasteriser that lets a session start with no GPU" depends="libdrm expat zlib python meson ninja" srcdir=mesa-$version
+# llvm is off: softpipe renders correctly on the CPU and costs a fraction of a
+# full LLVM build. Turning llvmpipe on later is one line, not a rebuild of the
+# desktop.
+build=meson setup build --prefix=/usr --buildtype=plain -Dllvm=disabled -Dgallium-drivers=softpipe -Dvulkan-drivers= -Dgles2=enabled -Dgles1=disabled -Dopengl=true -Dglx=disabled -Dshared-glapi=enabled -Dplatforms=wayland -Dbuild-tests=false -Denable-glcpp-tests=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+
+category=graphics name=wlroots version=0.18.2 source=https://deb.debian.org/debian/pool/main/w/wlroots/wlroots_0.18.2.orig.tar.bz2 license="MIT" description="The Wayland compositor library: everything a compositor needs, nothing it does not" depends="libdrm libdisplay-info hwdata libinput seatd libxkbcommon mesa pixman wayland wayland-protocols xorgproto meson ninja" srcdir=wlroots-0.18.2
+# GLES2 rendering on Mesa's software rasteriser: the one path that works on a
+# machine with no GPU at all, which is exactly where a first boot has to succeed.
+# wlroots 0.18 is the newest release labwc 0.8.3 links against, and it has no
+# pixman renderer either: Mesa's softpipe is what makes a GPU-less session work.
+# Xwayland is off: Wylde does not pretend to be X11.
+build=meson setup build --prefix=/usr --buildtype=plain -Dbackends=libinput,drm -Drenderers=gles2 -Dxwayland=disabled -Dsession=enabled -Dexamples=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+
+category=graphics name=labwc version=0.8.3 source=https://deb.debian.org/debian/pool/main/l/labwc/labwc_0.8.3.orig.tar.gz license="MIT" description="A small, fast, scriptable Wayland compositor" depends="wlroots wayland libxkbcommon xorgproto seatd libdrm glib pango cairo meson ninja"
+build=meson setup build --prefix=/usr --buildtype=plain -Dman-pages=disabled -Dnls=disabled -Dtest=disabled -Dsvg=disabled
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+
+category=graphics name=foot version=1.28.0 source=https://deb.debian.org/debian/pool/main/f/foot/foot_$version.orig.tar.xz license="MIT" description="A small terminal emulator that speaks Wayland natively" depends="freetype fontconfig ncurses libpng meson ninja" srcdir=foot-$version
+build=meson setup build --prefix=/usr --buildtype=plain -Dtests=false -Ddocs=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+
+category=graphics name=freetype version=2.14.1 source=https://download.savannah.gnu.org/releases/freetype/freetype-$version.tar.xz license="FTL GPL-2.0-or-later" description="Font rasteriser: without it there is no readable text anywhere"
+build=./configure --prefix=/usr --disable-static --with-zlib=yes --with-bzip2=yes
+     make
+     make DESTDIR="$PKG" install
+     find "$PKG" -name '*.la' -delete
+
+category=graphics name=libpng version=1.6.50 source=https://github.com/pnggroup/libpng/archive/refs/tags/v$version.tar.gz license="PNG" description="PNG codec, needed by the terminal and every screenshot tool" depends="zlib" srcdir=libpng-$version
+# libpng still ships autotools at 1.6.50; meson arrived later. Staying with
+# configure keeps the build free of a cmake bootstrap.
+build=./configure --prefix=/usr --disable-static
+     make
+     make DESTDIR="$PKG" install
+     find "$PKG" -name '*.la' -delete
+
+category=graphics name=fontconfig version=2.17.1 source=https://deb.debian.org/debian/pool/main/f/fontconfig/fontconfig_$version.orig.tar.gz license="MIT" description="Finds and caches the fonts on the system" depends="expat freetype zlib"
+# fontconfig 2.17 is a meson project; the autotools build is gone
+build=meson setup build --prefix=/usr --buildtype=plain -Ddoc=disabled -Ddoc-txt=disabled -Ddoc-man=disabled -Dtests=disabled
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+     # an empty cache directory: the real cache is written at first boot
+     mkdir -p "$PKG/var/cache/fontconfig"
+
+category=graphics name=weston version=16.0.0 source=https://deb.debian.org/debian/pool/main/w/weston/weston_$version.orig.tar.xz license="MIT" description="Reference Wayland compositor. Kept for one reason: its pixman backend renders with the CPU, so a session starts on a machine with no GPU at all" depends="wayland wayland-protocols libdrm pixman libinput libxkbcommon xorgproto expat libxml2 meson ninja" srcdir=weston-$version
+build=meson setup build --prefix=/usr --buildtype=plain -Dbackend-drm=true -Dbackend-headless=true -Dbackend-wayland=false -Dbackend-x11=false -Dbackend-pipewire=false -Dbackend-rdp=false -Dbackend-vnc=false -Drenderer-gl=false -Drenderer-vulkan=false -Ddoc=false -Ddemo-clients=false -Dimage-jpeg=false -Dimage-webp=false -Dshell-desktop=false -Dcolor-management-lcms=false -Dperfetto=false -Dsystemd=false -Dshell-lua=false -Dsimple-clients= -Dshell-ivi=false -Dshell-kiosk=false -Dxwayland=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+
+category=graphics name=cairo version=1.18.4 source=https://deb.debian.org/debian/pool/main/c/cairo/cairo_$version.orig.tar.xz license="LGPL-2.1-or-later MPL-1.1" description="2D drawing, the part of a desktop that draws even when there is no GPU" depends="pixman freetype fontconfig expat zlib libpng meson ninja" srcdir=cairo-$version
+# image surface only: no X11, no EGL. A GPU-specific surface belongs to Mesa,
+# and Mesa is a separate decision.
+build=meson setup build --prefix=/usr --buildtype=plain -Dxlib=disabled -Dxlib-xcb=disabled -Dxcb=disabled -Dpng=enabled -Dquartz=disabled -Dglib=disabled -Dspectre=disabled -Ddwrite=disabled -Dtests=disabled
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+
+category=build name=pyyaml version=6.0.3 source=https://github.com/yaml/pyyaml/archive/refs/tags/$version.tar.gz license=MIT description="YAML parser for Python; the base Python has no pip, so only the pure-Python part is installed" srcdir=pyyaml-$version
+# Pure Python, and the base Python has no setuptools: unpack into the stdlib's
+# own site-packages, which is already on sys.path.
+build=mkdir -p "$PKG/usr/lib/python3.13/site-packages"
+     cp -r "$SRCDIR/lib/yaml" "$PKG/usr/lib/python3.13/site-packages/"
+
+category=build name=mako version=1.3.10 source=https://deb.debian.org/debian/pool/main/m/mako/mako_$version.orig.tar.gz license=MIT description="Template engine Python uses to generate Mesa's shader code"
+build=mkdir -p "$PKG/usr/lib/python3.13/site-packages"
+     cp -r "$SRCDIR/mako" "$PKG/usr/lib/python3.13/site-packages/"
+
+category=build name=packaging version=25.0 source=https://github.com/pypa/packaging/archive/refs/tags/$version.tar.gz license="Apache-2.0 OR BSD-2-Clause" description="Version comparison for Python; Python 3.13 dropped distutils and mesa's build checks versions with it" srcdir=packaging-$version
+build=mkdir -p "$PKG/usr/lib/python3.13/site-packages"
+     cp -r "$SRCDIR/src/packaging" "$PKG/usr/lib/python3.13/site-packages/"
+
+
+category=build name=pcre2 version=10.48 source=https://deb.debian.org/debian/pool/main/p/pcre2/pcre2_$version.orig.tar.gz license=BSD-3-Clause description="Regular expression library, needed by glib" depends=""
+build=./configure --prefix=/usr --disable-static --enable-jit --enable-pcre2-16 --enable-pcre2-32 --enable-pcre2grep-jit
+     make
+     make DESTDIR="$PKG" install
+     find "$PKG" -name '*.la' -delete
+
+category=build name=glib version=2.84.4 source=https://download.gnome.org/sources/glib/2.84/glib-$version.tar.xz license=LGPL-2.1-or-later description="Foundational library for GNOME software; labwc's toolkit" depends="libffi pcre2 zlib meson ninja"
+build=meson setup build --prefix=/usr --buildtype=plain -Dintrospection=disabled -Dtests=false -Dman-pages=disabled -Dglib_debug=disabled
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+
+
+category=graphics name=pango version=1.56.4 source=https://download.gnome.org/sources/pango/1.56/pango-$version.tar.xz license=LGPL-2.1-or-later description="Text layout with shaping; a compositor draws text with it" depends="cairo glib harfbuzz fribidi meson ninja"
+build=meson setup build --prefix=/usr --buildtype=plain -Dintrospection=disabled -Dbuild-testsuite=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+
+category=graphics name=fribidi version=1.0.16 source=https://deb.debian.org/debian/pool/main/f/fribidi/fribidi_$version.orig.tar.xz license=LGPL-2.1-or-later description="Bidirectional text, so a non-Latin language is not mangled" depends="meson ninja"
+build=meson setup build --prefix=/usr --buildtype=plain -Ddocs=false -Dtests=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+
+category=graphics name=harfbuzz version=10.2.0 source=https://deb.debian.org/debian/pool/main/h/harfbuzz/harfbuzz_$version.orig.tar.xz license="MIT" description="Text shaping: without it letters do not connect" depends="freetype cairo glib meson ninja"
+build=meson setup build --prefix=/usr --buildtype=plain -Dtests=disabled -Ddocs=disabled -Dintrospection=disabled -Dicu=disabled -Dgraphite=disabled -Dgobject=disabled
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install

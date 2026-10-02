@@ -1,0 +1,14 @@
+name=cairo
+version=1.18.4
+description="2D drawing, the part of a desktop that draws even when there is no GPU"
+license="LGPL-2.1-or-later MPL-1.1"
+source=https://deb.debian.org/debian/pool/main/c/cairo/cairo_$version.orig.tar.xz
+checksum(https://deb.debian.org/debian/pool/main/c/cairo/cairo_$version.orig.tar.xz)=445ed8208a6e4823de1226a74ca319d3600e83f6369f99b14265006599c32ccb
+depends="pixman freetype fontconfig expat zlib libpng meson ninja"
+srcdir=cairo-$version
+
+build() {
+    meson setup build --prefix=/usr --buildtype=plain -Dxlib=disabled -Dxlib-xcb=disabled -Dxcb=disabled -Dpng=enabled -Dquartz=disabled -Dglib=disabled -Dspectre=disabled -Ddwrite=disabled -Dtests=disabled
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+}

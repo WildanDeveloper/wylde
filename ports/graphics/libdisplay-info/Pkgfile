@@ -2,12 +2,13 @@ name=libdisplay-info
 version=0.3.0
 description="Reads EDID and DisplayID so a compositor knows what a connector is"
 license=MIT
-source=https://gitlab.freedesktop.org/emersion/libdisplay-info/-/archive/$version/libdisplay-info-$version.tar.gz
-checksum(https://gitlab.freedesktop.org/emersion/libdisplay-info/-/archive/$version/libdisplay-info-$version.tar.gz)=2b467e3336aec63819d6aca28d7310d3dc7415b2b3a3c3a5aec9d3727053c078
+source=https://deb.debian.org/debian/pool/main/libd/libdisplay-info/libdisplay-info_$version.orig.tar.bz2
+checksum(https://deb.debian.org/debian/pool/main/libd/libdisplay-info/libdisplay-info_$version.orig.tar.bz2)=915cc6713b7b2e173a90f9db248fb8994f9668171fecc1e9fded5e36bb34d890
 depends="meson ninja"
+srcdir=libdisplay-info-$version
 
 build() {
-    meson setup build --prefix=/usr --buildtype=plain -Dtests=false
+    meson setup build --prefix=/usr --buildtype=plain
      ninja -C build
      DESTDIR="$PKG" ninja -C build install
 }

@@ -207,6 +207,18 @@ def main() -> int:
         globals()["SOURCES_CANDIDATES"] = [args.fetch_dir]
 
     records = load_spec(args.spec)
+
+    # a record is one logical line: category= name= version= source= ... A field
+    # left on its own line silently starts a new, nameless record, which used to
+    # surface as a bare KeyError.
+    broken = [r for r in records if "source" not in r or "name" not in r]
+    if broken:
+        print("ports.spec: these lines are not records (every field belongs on one line):")
+        for record in broken:
+            fields = ", ".join(sorted(record))
+            print(f"  {{{fields}}}")
+        return 2
+
     missing = []
     for record in records:
         tarball = record["source"].rsplit("/", 1)[-1]

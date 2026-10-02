@@ -14,7 +14,8 @@ LOG=${LOG:-/tmp/wylde-boot.log}
 
 log() { echo "[boot-test] $*"; }
 
-pkill -f "qemu-system-x86_64" 2>/dev/null || true
+# the bracket keeps pkill from matching its own command line
+pkill -f '[q]emu-system-x86_64' 2>/dev/null || true
 sleep 1
 
 [ -f "$IMG" ] || { log "no image at $IMG"; exit 1; }

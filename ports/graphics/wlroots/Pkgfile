@@ -1,0 +1,14 @@
+name=wlroots
+version=0.18.2
+description="The Wayland compositor library: everything a compositor needs, nothing it does not"
+license="MIT"
+source=https://deb.debian.org/debian/pool/main/w/wlroots/wlroots_0.18.2.orig.tar.bz2
+checksum(https://deb.debian.org/debian/pool/main/w/wlroots/wlroots_0.18.2.orig.tar.bz2)=a28061f7778f28f7be377fd4d6f0ebd58cb2a63b52460e9fde28e2ab43e80cab
+depends="libdrm libdisplay-info hwdata libinput seatd libxkbcommon mesa pixman wayland wayland-protocols xorgproto meson ninja"
+srcdir=wlroots-0.18.2
+
+build() {
+    meson setup build --prefix=/usr --buildtype=plain -Dbackends=libinput,drm -Drenderers=gles2 -Dxwayland=disabled -Dsession=enabled -Dexamples=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+}

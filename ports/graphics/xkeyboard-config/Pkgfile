@@ -1,12 +1,13 @@
 name=xkeyboard-config
-version=2.45
+version=2.48
 description="Keyboard layouts and keymaps for X and Wayland"
 license="MIT GPL-2.0-or-later OFL-1.1"
-source=https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config/-/archive/$version/xkeyboard-config-$version.tar.xz
-checksum(https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config/-/archive/$version/xkeyboard-config-$version.tar.xz)=ed1054901036285a19c7a61ae789e48e0e9b7ef627ea866fa329ce543db2d9db
+source=https://deb.debian.org/debian/pool/main/x/xkeyboard-config/xkeyboard-config_$version.orig.tar.xz
+checksum(https://deb.debian.org/debian/pool/main/x/xkeyboard-config/xkeyboard-config_$version.orig.tar.xz)=b77041324f0109f77161ee43743fe04baa485866af8460d31e476ad3f7648fd5
+srcdir=xkeyboard-config-$version
 
 build() {
-    ./configure --prefix=/usr --with-xkb-config-root=/usr/share/X11/xkb --disable-docs
-     make
-     make DESTDIR="$PKG" install
+    meson setup build --prefix=/usr --buildtype=plain -Dnls=false -Dcompat-rules=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
 }

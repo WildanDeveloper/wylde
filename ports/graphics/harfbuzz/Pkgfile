@@ -1,0 +1,13 @@
+name=harfbuzz
+version=10.2.0
+description="Text shaping: without it letters do not connect"
+license="MIT"
+source=https://deb.debian.org/debian/pool/main/h/harfbuzz/harfbuzz_$version.orig.tar.xz
+checksum(https://deb.debian.org/debian/pool/main/h/harfbuzz/harfbuzz_$version.orig.tar.xz)=620e3468faec2ea8685d32c46a58469b850ef63040b3565cde05959825b48227
+depends="freetype cairo glib meson ninja"
+
+build() {
+    meson setup build --prefix=/usr --buildtype=plain -Dtests=disabled -Ddocs=disabled -Dintrospection=disabled -Dicu=disabled -Dgraphite=disabled -Dgobject=disabled
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+}

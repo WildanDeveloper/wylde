@@ -2,9 +2,10 @@ name=libevdev
 version=1.13.7
 description="evdev input device access"
 license=LGPL-2.1-or-later
-source=https://gitlab.freedesktop.org/libevdev/libevdev/-/archive/libevdev-$version/libevdev-libevdev-$version.tar.gz
-checksum(https://gitlab.freedesktop.org/libevdev/libevdev/-/archive/libevdev-$version/libevdev-libevdev-$version.tar.gz)=9294aaaff6829ab1581e6684f4c3ddc449fee563229e863353a4893f1a673f4b
+source=https://deb.debian.org/debian/pool/main/libe/libevdev/libevdev_$version+dfsg.orig.tar.xz
+checksum(https://deb.debian.org/debian/pool/main/libe/libevdev/libevdev_$version+dfsg.orig.tar.xz)=8c398e5082864c647e29b1b44f6742b6abf830a51c2c74e300a58422ec2d75ee
 depends="meson ninja"
+srcdir=libevdev-$version
 
 build() {
     meson setup build --prefix=/usr --buildtype=plain -Ddocumentation=disabled -Dtests=disabled

@@ -124,6 +124,11 @@ jobs:
         # a boot that reaches the login prompt is the real unit of trust
         run: sudo ./scripts/boot-test.sh /mnt/wylde/wylde.img
 
+      - name: the desktop session has to come up
+        # a boot that reaches a login prompt is not a desktop: this boots with a
+        # graphics device and asks a Wayland client whether the compositor serves
+        run: sudo ./scripts/desktop-test.sh /mnt/wylde/wylde.img
+
       - name: measure boot time and idle memory
         run: |
           sudo ./scripts/benchmark.sh \

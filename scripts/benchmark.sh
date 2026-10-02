@@ -15,7 +15,8 @@ PORT=${4:-4561}
 INITRD=${INITRD:-/root/distro/build/initramfs.cpio.gz}
 
 # a guest from an interrupted run still holds the serial port and CPU
-pkill -f "qemu-system-x86_64" 2>/dev/null || true
+# the bracket keeps pkill from matching its own command line
+pkill -f '[q]emu-system-x86_64' 2>/dev/null || true
 sleep 1
 
 # KVM and TCG are not comparable: the same guest boots an order of magnitude
@@ -49,6 +50,6 @@ python3 "$(dirname "$0")/measure.py" "$PORT" "$OUT" "$ACCEL"
 STATUS=$?
 set -e
 
-pkill -f "qemu-system-x86_64.*$PORT" 2>/dev/null || true
+pkill -f "[q]emu-system-x86_64.*$PORT" 2>/dev/null || true
 [ -f "$OUT" ] && { echo "benchmark: $OUT"; cat "$OUT"; }
 exit $STATUS

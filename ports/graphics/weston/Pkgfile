@@ -1,0 +1,14 @@
+name=weston
+version=16.0.0
+description="Reference Wayland compositor. Kept for one reason: its pixman backend renders with the CPU, so a session starts on a machine with no GPU at all"
+license="MIT"
+source=https://deb.debian.org/debian/pool/main/w/weston/weston_$version.orig.tar.xz
+checksum(https://deb.debian.org/debian/pool/main/w/weston/weston_$version.orig.tar.xz)=dfb32e2bccabda957b94a8d0ec6075acd18c71c87ebc543ee3e618d294ca0f7f
+depends="wayland wayland-protocols libdrm pixman libinput libxkbcommon xorgproto expat libxml2 meson ninja"
+srcdir=weston-$version
+
+build() {
+    meson setup build --prefix=/usr --buildtype=plain -Dbackend-drm=true -Dbackend-headless=true -Dbackend-wayland=false -Dbackend-x11=false -Dbackend-pipewire=false -Dbackend-rdp=false -Dbackend-vnc=false -Drenderer-gl=false -Drenderer-vulkan=false -Ddoc=false -Ddemo-clients=false -Dimage-jpeg=false -Dimage-webp=false -Dshell-desktop=false -Dcolor-management-lcms=false -Dperfetto=false -Dsystemd=false -Dshell-lua=false -Dsimple-clients= -Dshell-ivi=false -Dshell-kiosk=false -Dxwayland=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+}

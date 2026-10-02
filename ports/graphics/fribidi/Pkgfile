@@ -1,0 +1,13 @@
+name=fribidi
+version=1.0.16
+description="Bidirectional text, so a non-Latin language is not mangled"
+license=LGPL-2.1-or-later
+source=https://deb.debian.org/debian/pool/main/f/fribidi/fribidi_$version.orig.tar.xz
+checksum(https://deb.debian.org/debian/pool/main/f/fribidi/fribidi_$version.orig.tar.xz)=1b1cde5b235d40479e91be2f0e88a309e3214c8ab470ec8a2744d82a5a9ea05c
+depends="meson ninja"
+
+build() {
+    meson setup build --prefix=/usr --buildtype=plain -Ddocs=false -Dtests=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+}

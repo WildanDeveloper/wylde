@@ -1,0 +1,17 @@
+#!/bin/sh
+# The first thing a person sees. It states what is running and what is not,
+# instead of pretending the desktop is finished.
+cat << 'BANNER'
+  Wylde Linux — Wayland session is running.
+
+  compositor : labwc (wlroots, software rendering)
+  renderer   : Mesa softpipe
+  terminal   : not installed yet (foot is next)
+
+  Log out with Alt+F4, or run `poweroff` from a shell.
+BANNER
+echo
+echo "This is the first graphical boot of Wylde: the session, the compositor and"
+echo "the graphics stack are all built by wld from source."
+echo
+exec sleep infinity

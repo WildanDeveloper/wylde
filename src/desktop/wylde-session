@@ -1,0 +1,155 @@
+#!/bin/bash
+# Wylde session — what a logged-in user actually gets.
+#
+# Started by wylde-init on the desktop tty. It does the three things a Wayland
+# session needs and nothing else: a runtime directory, a seat manager, and a
+# compositor. If the compositor dies, the user gets another one rather than a
+# black screen and no explanation.
+set -u
+
+USER_NAME=${USER_NAME:-root}
+export XDG_RUNTIME_DIR=/run/user/0
+export WAYLAND_DISPLAY=wayland-0
+export XDG_SESSION_TYPE=wayland
+export XDG_SESSION_DESKTOP=wylde
+export XDG_CURRENT_DESKTOP=wylde
+export DESKTOP_SESSION=wylde
+
+# Mesa's software rasteriser. On a machine with no GPU this is the only thing
+# that can draw, and on a machine with one it is never chosen over the real
+# driver — so the session always comes up.
+export LIBGL_ALWAYS_SOFTWARE=${LIBGL_ALWAYS_SOFTWARE:-1}
+# wlroots refuses to run on a software renderer unless told this explicitly
+export WLR_RENDERER_ALLOW_SOFTWARE=${WLR_RENDERER_ALLOW_SOFTWARE:-1}
+# A virtual GPU has no Gallium driver; this is what makes Mesa fall back to its
+# own rasteriser instead of failing to find one. On real hardware Mesa picks the
+# hardware driver and this variable is ignored.
+export MESA_LOADER_DRIVER_OVERRIDE=${MESA_LOADER_DRIVER_OVERRIDE:-swrast}
+export GALLIUM_DRIVER=${GALLIUM_DRIVER:-softpipe}
+export WLR_BACKENDS=${WLR_BACKENDS:-drm,libinput}
+export WLR_RENDERER=${WLR_RENDERER:-gles2}
+export XDG_CONFIG_HOME=/etc/wylde
+export XDG_DATA_HOME=/usr/share
+
+mkdir -p "$XDG_RUNTIME_DIR"
+chmod 700 "$XDG_RUNTIME_DIR"
+
+# Start from a clean slate. A compositor left over from an earlier attempt keeps
+# the DRM master and the graphics port, and the new one then fails for reasons
+# that have nothing to do with the session: the machine is fine, the room is
+# occupied.
+pkill -x labwc 2>/dev/null || true
+sleep 1
+# A compositor that died also leaves its socket behind, and the next one takes
+# the next number. Clear them so the session always starts on wayland-0.
+rm -f "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null || true
+
+log() { echo "[session] $*"; }
+
+log "starting the seat manager"
+if [ -x /usr/bin/seatd ]; then
+    # seatd owns the seat; without it wlroots has no input devices and refuses
+    # to start. The socket has to exist before labwc asks for it: starting the
+    # compositor first fails with "No backend was able to open a seat".
+    seatd &
+    SEATD_PID=$!
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+        [ -S /run/seatd.sock ] && break
+        sleep 0.2
+    done
+    [ -S /run/seatd.sock ] && log "seat ready" || log "seat socket missing"
+fi
+
+if [ ! -e /dev/dri/card0 ] && [ ! -e /dev/dri/card1 ]; then
+    log "no DRM device found — the kernel exposes none (/dev/dri is empty)"
+    log "a Wayland session cannot start without one"
+fi
+
+# wlroots refuses to start a libinput backend with no input devices at all.
+# That is a real situation: a virtual machine started without a tablet, or a
+# machine whose input devices have not appeared yet. Say so and carry on
+# rather than leaving a black screen and no explanation.
+if ! ls /dev/input/event* >/dev/null 2>&1; then
+    log "no input devices found — starting the compositor without input"
+    export WLR_LIBINPUT_NO_DEVICES=1
+fi
+
+# Two ways to start, in order of what a person actually wants.
+#
+#   1. the real thing: DRM/KMS on a GPU that has a driver
+#   2. headless: no output at all, but a working Wayland server
+#
+# The second is not a consolation prize. A machine with no GPU driver is a
+# normal place to run a session — a build server, a container, a CI job — and a
+# session that refuses to start there cannot be tested or debugged.
+#
+# A compositor that starts and then wedges is the failure mode worth catching:
+# it leaves a socket nobody can connect to and a process nobody can see. So the
+# session verifies itself with the probe and moves on when the probe fails.
+
+probe_ok() {
+    [ -x /usr/bin/wylde-session-probe ] || return 0   # nothing to verify with
+    WAYLAND_DISPLAY=$WAYLAND_DISPLAY XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR \
+        /usr/bin/wylde-session-probe >/dev/null 2>&1
+}
+
+run_compositor() {
+    backends=$1
+    label=$2
+    attempt=0
+
+    while [ "$attempt" -lt 2 ]; do
+        attempt=$((attempt + 1))
+        rm -f "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null || true
+        log "compositor start #$attempt [$label]"
+
+        # no -s: labwc reads "autostart" from the configuration directory, where
+        # build/18-desktop.sh puts it. Pointing -s at a file that does not exist
+        # makes the compositor exit before it draws anything.
+        WLR_BACKENDS=$backends /usr/bin/labwc -c /etc/wylde/labwc/rc.xml &
+        LABWC_PID=$!
+
+        # give it time to open the socket and answer a client
+        settled=0
+        for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+            sleep 1
+            if ! kill -0 "$LABWC_PID" 2>/dev/null; then
+                break
+            fi
+            if probe_ok; then
+                settled=1
+                break
+            fi
+        done
+
+        if [ "$settled" -eq 1 ]; then
+            log "session is up [$label], compositor pid $LABWC_PID"
+            wait "$LABWC_PID"
+            log "labwc exited with status $?"
+            return 0
+        fi
+
+        # Kill the whole compositor, not just the process we remember: labwc
+        # spawns helpers, and a survivor keeps the DRM port open.
+        pkill -x labwc 2>/dev/null || true
+        if kill -0 "$LABWC_PID" 2>/dev/null; then
+            log "[$label] started but never answered a client — stopping it"
+            kill "$LABWC_PID" 2>/dev/null
+        fi
+        sleep 1
+        pkill -9 -x labwc 2>/dev/null || true
+        log "[$label] did not come up"
+    done
+    return 1
+}
+
+if run_compositor "${WLR_BACKENDS:-drm,libinput}" "drm"; then
+    log "session ended"
+elif run_compositor headless "headless"; then
+    log "session running without a display: no GPU on this machine could be used"
+else
+    log "the compositor failed on every backend — leaving the user at a prompt"
+fi
+
+[ -n "${SEATD_PID:-}" ] && kill "$SEATD_PID" 2>/dev/null
+exit 0

@@ -2,9 +2,10 @@ name=wayland-protocols
 version=1.49
 description="Interface definitions every Wayland component shares"
 license=MIT
-source=https://gitlab.freedesktop.org/wayland/wayland-protocols/-/archive/$version/wayland-protocols-$version.tar.gz
-checksum(https://gitlab.freedesktop.org/wayland/wayland-protocols/-/archive/$version/wayland-protocols-$version.tar.gz)=8d94eee148db4d8111ccc0d4331de2f82d4b28c38e30eace9f052886480f7d86
+source=https://deb.debian.org/debian/pool/main/w/wayland-protocols/wayland-protocols_$version.orig.tar.xz
+checksum(https://deb.debian.org/debian/pool/main/w/wayland-protocols/wayland-protocols_$version.orig.tar.xz)=ec4c8f74942d6dff7ace8b4ce4764f0ef9ff618a935d974ea77edee2ad240b14
 depends="meson ninja"
+srcdir=wayland-protocols-$version
 
 build() {
     meson setup build --prefix=/usr --buildtype=plain -Dtests=false

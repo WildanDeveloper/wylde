@@ -1,0 +1,14 @@
+name=foot
+version=1.28.0
+description="A small terminal emulator that speaks Wayland natively"
+license="MIT"
+source=https://deb.debian.org/debian/pool/main/f/foot/foot_$version.orig.tar.xz
+checksum(https://deb.debian.org/debian/pool/main/f/foot/foot_$version.orig.tar.xz)=17621ad2e38a83688202117599857212a65434ae0562752a38167537a6c35cbd
+depends="freetype fontconfig ncurses libpng meson ninja"
+srcdir=foot-$version
+
+build() {
+    meson setup build --prefix=/usr --buildtype=plain -Dtests=false -Ddocs=false
+     ninja -C build
+     DESTDIR="$PKG" ninja -C build install
+}
