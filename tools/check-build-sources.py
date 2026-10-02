@@ -70,6 +70,26 @@ def destructive_dirglobs(scripts: list[Path]) -> list[str]:
     return problems
 
 
+def ambiguous_cd(scripts: list[Path]) -> list[str]:
+    """Find `cd <glob>` lines.
+
+    In a source directory `cd bash-*` matches the unpacked tree and the tarball
+    beside it, and cd refuses two arguments — a failure that only shows up on a
+    machine where the package has never been built before.
+    """
+    problems = []
+    pattern = re.compile(r"^\s*cd\s+([\w.*?]+)\s*$", re.M)
+    for script in scripts:
+        text = "\n".join(
+            line for line in script.read_text().splitlines()
+            if not line.lstrip().startswith("#")
+        )
+        for target in pattern.findall(text):
+            if "*" in target or "?" in target:
+                problems.append(f"{script}: cd {target} is ambiguous once the tarball is unpacked")
+    return problems
+
+
 def main() -> int:
     args = sys.argv[1:]
     wget_list = Path(args[0]) if args else Path("sources/wget-list")
@@ -121,6 +141,8 @@ def main() -> int:
 
     for problem in destructive_dirglobs(scripts):
         problems.append((problem.split(":")[0], problem.split(": ", 1)[1], "destructive glob"))
+    for problem in ambiguous_cd(scripts):
+        problems.append((problem.split(":")[0], problem.split(": ", 1)[1], "ambiguous cd"))
     if problems:
         print()
         for script, reference, why in problems:
