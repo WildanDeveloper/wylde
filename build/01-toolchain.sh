@@ -173,9 +173,13 @@ find . -maxdepth 1 -type d -name "$dirglob" -exec rm -rf {} +
 tar -xf $tarball
 # "cd bash-*" matches the unpacked directory *and* the tarball next to it, and
 # cd then refuses two arguments. Ask for a directory explicitly.
-source_dir=$(find . -maxdepth 1 -type d -name "$dirglob" | head -1)
-[ -n "$source_dir" ] || { echo "no directory matching $dirglob after unpacking $tarball" >&2; exit 1; }
-cd "$source_dir"
+# $(...) and $source_dir must survive heredoc generation and only run at stage
+# time — an unescaped $ would expand while the script is being written, and an
+# empty one then fails with an explainable-looking error that is not the real
+# cause.
+source_dir=\$(find . -maxdepth 1 -type d -name "$dirglob" | head -1)
+[ -n "\$source_dir" ] || { echo "no directory matching $dirglob after unpacking $tarball" >&2; exit 1; }
+cd "\$source_dir"
 $*
 STAGE
   stage "$name" /tmp/wylde-ch5-$name.sh
